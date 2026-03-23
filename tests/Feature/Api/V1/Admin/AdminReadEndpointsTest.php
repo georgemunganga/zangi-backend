@@ -179,6 +179,29 @@ class AdminReadEndpointsTest extends TestCase
             'verified_at' => null,
         ]);
 
+        $cashOnDeliveryOrder = Order::query()->create([
+            'reference' => 'ZG-BOOK-0002',
+            'portal_user_id' => $portalUser->id,
+            'buyer_type' => 'individual',
+            'email' => $portalUser->email,
+            'phone' => $portalUser->phone,
+            'organization_name' => null,
+            'product_slug' => 'zangi-flag-of-kindness',
+            'product_title' => 'Zangi: The Flag of Kindness',
+            'format' => 'hardcopy',
+            'quantity' => 1,
+            'currency' => 'ZMW',
+            'unit_price' => 358.40,
+            'total' => 358.40,
+            'status' => 'Received',
+            'timeline' => ['Received', 'Confirmed', 'Processing', 'Shipped', 'Delivered'],
+            'current_step' => 0,
+            'payment_status' => 'Pending on Delivery',
+            'payment_method' => 'cash-on-delivery',
+            'download_ready' => false,
+            'download_path' => null,
+        ]);
+
         $contactMessage = ContactMessage::query()->create([
             'name' => 'Temwani Daka',
             'email' => $portalUser->email,
@@ -201,12 +224,27 @@ class AdminReadEndpointsTest extends TestCase
         $ordersResponse = $this->withToken($token)
             ->getJson('/api/v1/admin/orders')
             ->assertOk()
-            ->assertJsonPath('meta.total', 2);
+            ->assertJsonPath('meta.total', 3);
+
+        $ordersResponse->assertJsonFragment([
+            'id' => 'book_order_'.$cashOnDeliveryOrder->id,
+            'reference' => 'ZG-BOOK-0002',
+            'paymentStatus' => 'pending',
+            'paymentStatusLabel' => 'Pending on Delivery',
+            'paymentMethod' => 'Cash On Delivery',
+        ]);
 
         $this->withToken($token)
             ->getJson('/api/v1/admin/orders/book_order_'.$order->id)
             ->assertOk()
             ->assertJsonPath('reference', 'ZG-BOOK-0001');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/admin/orders/book_order_'.$cashOnDeliveryOrder->id)
+            ->assertOk()
+            ->assertJsonPath('reference', 'ZG-BOOK-0002')
+            ->assertJsonPath('paymentStatus', 'pending')
+            ->assertJsonPath('paymentMethod', 'Cash On Delivery');
 
         $this->withToken($token)
             ->getJson('/api/v1/admin/customers')

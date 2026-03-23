@@ -392,7 +392,11 @@ class AdminDataService
                     'customerId' => $this->customerKey($ticketPurchase->portal_user_id, $ticketPurchase->email),
                 ];
             })
-            ->filter(fn (array $ticket): bool => $this->shouldExposeOperationalRecord($ticket['source'], $ticket['paymentStatus']))
+            ->filter(fn (array $ticket): bool => $this->shouldExposeOperationalRecord(
+                $ticket['source'],
+                $ticket['paymentStatus'],
+                $ticket['paymentMethod'],
+            ))
             ->sortByDesc('issuedAt')
             ->values();
     }
@@ -519,7 +523,11 @@ class AdminDataService
 
         return $this->unifiedOrderRecords = $bookRecords
             ->concat($ticketRecords)
-            ->filter(fn (array $order): bool => $this->shouldExposeOperationalRecord($order['source'], $order['paymentStatus']))
+            ->filter(fn (array $order): bool => $this->shouldExposeOperationalRecord(
+                $order['source'],
+                $order['paymentStatus'],
+                $order['paymentMethod'],
+            ))
             ->sortByDesc('createdAt')
             ->values();
     }
@@ -986,9 +994,20 @@ class AdminDataService
                 : 'Existing';
     }
 
-    private function shouldExposeOperationalRecord(?string $source, ?string $paymentStatus): bool
+    private function shouldExposeOperationalRecord(
+        ?string $source,
+        ?string $paymentStatus,
+        ?string $paymentMethod = null,
+    ): bool
     {
         if ($source === 'admin_manual') {
+            return true;
+        }
+
+        if (
+            $this->normalizedString($paymentStatus) === 'pending'
+            && $this->normalizedString($paymentMethod) === 'cash_on_delivery'
+        ) {
             return true;
         }
 

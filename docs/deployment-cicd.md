@@ -7,6 +7,8 @@
 - updates the backend code on the server with `git fetch` + `git reset --hard`
 - runs:
   - `composer install --no-dev`
+  - `npm ci --include=dev`
+  - `npm run build`
   - `php artisan migrate --force`
   - `php artisan optimize:clear`
   - `php artisan storage:link`
@@ -43,6 +45,42 @@ DEPLOY_PUBLIC_PATH=/home/Zangi/web/app.zangisworld.com/public_html
 
 `DEPLOY_PUBLIC_PATH` only works safely if `public_html` is already removed or is already a symlink.
 
+For your server, if you are currently in:
+
+```text
+/home/Zangi/web/app.zangisworld.com/public_html
+```
+
+you have two valid deployment modes.
+
+### Mode A: keep the current server layout
+
+If the Laravel repo is already checked out inside `public_html`, use:
+
+```text
+DEPLOY_PATH=/home/Zangi/web/app.zangisworld.com/public_html
+DEPLOY_PUBLIC_PATH=
+DEPLOY_REPOSITORY=
+```
+
+This tells Envoy to reuse the existing git checkout and its current `origin`.
+
+### Mode B: move later to the recommended layout
+
+If you later want the cleaner Laravel structure, use:
+
+```text
+DEPLOY_PATH=/home/Zangi/web/app.zangisworld.com/backend
+DEPLOY_PUBLIC_PATH=/home/Zangi/web/app.zangisworld.com/public_html
+DEPLOY_REPOSITORY=git@github.com:OWNER/REPO.git
+```
+
+and make `public_html` point to:
+
+```text
+/home/Zangi/web/app.zangisworld.com/backend/public
+```
+
 ## GitHub Setup
 
 You do **not** need a PAT for this deployment flow.
@@ -73,6 +111,9 @@ Add these repository secrets in the **backend GitHub repo**:
   - private key used by GitHub Actions to SSH into the server
 - `DEPLOY_PATH`
   - full Laravel backend path on the VPS
+- `DEPLOY_REPOSITORY`
+  - optional if `DEPLOY_PATH` already contains a working git checkout with a valid `origin`
+  - required for first-time clone or when you want Envoy to replace the remote
 
 Optional secrets:
 
@@ -82,22 +123,40 @@ Optional secrets:
   - example: `php`
 - `DEPLOY_COMPOSER_BIN`
   - example: `composer`
+- `DEPLOY_NPM_BIN`
+  - example: `npm`
 - `DEPLOY_PHP_FPM_SERVICE`
   - example: `php8.3-fpm`
 - `DEPLOY_QUEUE_RESTART`
+  - `true` or `false`
+- `DEPLOY_BUILD_FRONTEND`
   - `true` or `false`
 
 ## Server Preparation
 
 ### 1. Clone location
 
-Create the target path if needed:
+If you are keeping the current server layout in `public_html`, you can skip this step.
+
+If you are moving to the recommended layout, create the target path:
 
 ```bash
 mkdir -p /home/Zangi/web/app.zangisworld.com/backend
 ```
 
+The server must also have Node.js and npm installed because this repo builds Vite assets during deploy.
+
+Minimum Node version for the current Vite setup:
+
+```text
+^20.19.0 || >=22.12.0
+```
+
 ### 2. Give the server GitHub repo access
+
+If `DEPLOY_PATH` already contains a working git checkout and Envoy is reusing the existing `origin`, this step is optional.
+
+If you want Envoy to clone the repo for the first time, or you want the server to pull from GitHub over SSH, do this:
 
 Generate a deploy key on the server:
 
@@ -129,10 +188,10 @@ Then add that public key in GitHub:
 
 ### 3. Add the production `.env`
 
-Create or edit:
+Create or edit the production app file in your active deploy path:
 
 ```bash
-/home/Zangi/web/app.zangisworld.com/backend/.env
+/home/Zangi/web/app.zangisworld.com/public_html/.env
 ```
 
 Set real production values for:
@@ -148,12 +207,29 @@ Set real production values for:
 
 ### 4. First manual deploy
 
-After the GitHub deploy key and `.env` are ready:
+If you keep the current layout, use:
 
 ```bash
-cd /home/Zangi/web/app.zangisworld.com/backend
-git clone --branch main git@github.com:georgemunganga/zangi-backend.git .
+cd /home/Zangi/web/app.zangisworld.com/public_html
 composer install --no-dev --prefer-dist --optimize-autoloader
+npm ci --include=dev
+npm run build
+php artisan key:generate --force
+php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+If you move to the recommended layout later, use:
+
+```bash
+cd /home/Zangi/web/app.zangisworld.com/
+git pull --branch main git@github.com:georgemunganga/zangi-backend.git .
+composer install --no-dev --prefer-dist --optimize-autoloader
+npm ci --include=dev
+npm run build
 php artisan key:generate --force
 php artisan migrate --force
 php artisan storage:link
@@ -192,17 +268,65 @@ php vendor/bin/envoy run deploy
 Envoy then runs on the VPS:
 
 ```bash
-git remote add origin git@github.com:georgemunganga/zangi-backend.git
+if DEPLOY_REPOSITORY is set:
+  update origin to DEPLOY_REPOSITORY
+else:
+  keep the existing origin remote
 git fetch origin main --prune
 git checkout main
 git reset --hard origin/main
 composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+npm ci --include=dev
+npm run build
 php artisan migrate --force
 php artisan optimize:clear
 php artisan storage:link
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
+```
+
+## Exact Server Setup For Your VPS
+
+### Keep current layout
+
+If the app is already checked out in:
+
+```text
+/home/Zangi/web/app.zangisworld.com/public_html
+```
+
+use these GitHub secrets:
+
+```text
+DEPLOY_HOST=admin
+DEPLOY_PORT=22
+DEPLOY_USER=root
+DEPLOY_PATH=/home/Zangi/web/app.zangisworld.com/public_html
+DEPLOY_PUBLIC_PATH=
+DEPLOY_REPOSITORY=
+DEPLOY_NPM_BIN=npm
+DEPLOY_BUILD_FRONTEND=true
+```
+
+In this mode, Envoy will reuse the existing git remote in `public_html`.
+
+### Move to recommended layout later
+
+If you decide to restructure later, run this on the server as `root`:
+
+```bash
+mkdir -p /home/Zangi/web/app.zangisworld.com/backend
+mv /home/Zangi/web/app.zangisworld.com/public_html /home/Zangi/web/app.zangisworld.com/public_html_backup_$(date +%F_%H-%M-%S)
+ln -s /home/Zangi/web/app.zangisworld.com/backend/public /home/Zangi/web/app.zangisworld.com/public_html
+```
+
+Then use:
+
+```text
+DEPLOY_PATH=/home/Zangi/web/app.zangisworld.com/backend
+DEPLOY_PUBLIC_PATH=/home/Zangi/web/app.zangisworld.com/public_html
+DEPLOY_REPOSITORY=git@github.com:OWNER/REPO.git
 ```
 
 ## Recommended Next Checks

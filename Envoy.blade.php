@@ -3,12 +3,14 @@
 @setup
     $deployPath = rtrim(env('DEPLOY_PATH', ''), '/');
     $deployBranch = env('DEPLOY_BRANCH', 'main');
-    $deployRepository = env('DEPLOY_REPOSITORY', 'git@github.com:georgemunganga/zangi-backend.git');
+    $deployRepository = trim((string) env('DEPLOY_REPOSITORY', ''));
     $phpBin = env('DEPLOY_PHP_BIN', 'php');
     $composerBin = env('DEPLOY_COMPOSER_BIN', 'composer');
+    $npmBin = env('DEPLOY_NPM_BIN', 'npm');
     $publicPath = rtrim(env('DEPLOY_PUBLIC_PATH', ''), '/');
     $phpFpmService = trim(env('DEPLOY_PHP_FPM_SERVICE', ''));
     $queueRestart = strtolower((string) env('DEPLOY_QUEUE_RESTART', 'false')) === 'true';
+    $buildFrontend = strtolower((string) env('DEPLOY_BUILD_FRONTEND', 'true')) !== 'false';
 @endsetup
 
 @story('setup', ['on' => 'production'])
@@ -24,6 +26,7 @@
     clone_or_attach_repository
     ensure_env_file
     install_dependencies
+    build_frontend_assets
     generate_app_key_if_missing
     run_migrations
     optimize_application
@@ -43,13 +46,30 @@
 
 @task('clone_or_attach_repository')
     if [ ! -d "{{ $deployPath }}/.git" ]; then
+        if [ -z "{{ $deployRepository }}" ]; then
+            echo "DEPLOY_REPOSITORY is required for the first deploy when {{ $deployPath }} is not already a git repository."
+            exit 1
+        fi
+
         git clone --branch "{{ $deployBranch }}" "{{ $deployRepository }}" "{{ $deployPath }}"
     fi
 
     cd "{{ $deployPath }}"
 
-    git remote remove origin >/dev/null 2>&1 || true
-    git remote add origin "{{ $deployRepository }}"
+    if [ -n "{{ $deployRepository }}" ]; then
+        current_remote="$(git remote get-url origin 2>/dev/null || true)"
+
+        if [ "$current_remote" != "{{ $deployRepository }}" ]; then
+            git remote remove origin >/dev/null 2>&1 || true
+            git remote add origin "{{ $deployRepository }}"
+        fi
+    fi
+
+    if ! git remote get-url origin >/dev/null 2>&1; then
+        echo "No git origin is configured in {{ $deployPath }}."
+        exit 1
+    fi
+
     git fetch origin "{{ $deployBranch }}" --prune
     git checkout "{{ $deployBranch }}"
     git reset --hard "origin/{{ $deployBranch }}"
@@ -65,6 +85,33 @@
 @task('install_dependencies')
     cd "{{ $deployPath }}"
     {{ $composerBin }} install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+@endtask
+
+@task('build_frontend_assets')
+    @if ($buildFrontend)
+    cd "{{ $deployPath }}"
+
+    if [ ! -f package.json ]; then
+        echo "No package.json found. Frontend build skipped."
+        exit 0
+    fi
+
+    if ! command -v "{{ $npmBin }}" >/dev/null 2>&1; then
+        echo "{{ $npmBin }} is not available on the server."
+        exit 1
+    fi
+
+    if [ -f package-lock.json ]; then
+        {{ $npmBin }} ci --include=dev
+    else
+        {{ $npmBin }} install
+    fi
+
+    rm -rf public/build
+    {{ $npmBin }} run build
+    @else
+    echo "Frontend build skipped."
+    @endif
 @endtask
 
 @task('generate_app_key_if_missing')

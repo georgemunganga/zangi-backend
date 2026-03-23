@@ -57,9 +57,11 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           DEPLOY_PUBLIC_PATH: ${{ secrets.DEPLOY_PUBLIC_PATH }}
           DEPLOY_BRANCH: main
-          DEPLOY_REPOSITORY: git@github.com:${{ github.repository }}.git
+          DEPLOY_REPOSITORY: ${{ secrets.DEPLOY_REPOSITORY }}
           DEPLOY_PHP_BIN: ${{ secrets.DEPLOY_PHP_BIN }}
           DEPLOY_COMPOSER_BIN: ${{ secrets.DEPLOY_COMPOSER_BIN }}
+          DEPLOY_NPM_BIN: ${{ secrets.DEPLOY_NPM_BIN }}
           DEPLOY_PHP_FPM_SERVICE: ${{ secrets.DEPLOY_PHP_FPM_SERVICE }}
           DEPLOY_QUEUE_RESTART: ${{ secrets.DEPLOY_QUEUE_RESTART }}
+          DEPLOY_BUILD_FRONTEND: ${{ secrets.DEPLOY_BUILD_FRONTEND }}
         run: php vendor/bin/envoy run deploy

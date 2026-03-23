@@ -24,7 +24,7 @@ class AuthController extends Controller
 
         if (! $portalUser) {
             return response()->json([
-                'message' => 'No portal account exists for that email. Create an account first.',
+                'message' => 'We could not find a portal account or purchase history for that email yet.',
             ], 404);
         }
 
@@ -34,6 +34,10 @@ class AuthController extends Controller
             'message' => 'OTP sent to the account email.',
             'email' => $portalUser->email,
             'role' => $portalUser->role,
+            'portalMode' => $portalUser->portal_mode,
+            'groupType' => $portalUser->group_type,
+            'hasIndividualAccess' => (bool) $portalUser->has_individual_access,
+            'hasGroupAccess' => (bool) $portalUser->has_group_access,
             'expiresAt' => $challenge->expires_at->toIso8601String(),
             'devOtpCode' => $this->devOtpCode(),
         ], 202);
@@ -46,6 +50,14 @@ class AuthController extends Controller
 
         $portalUser = PortalUser::create([
             'role' => $validated['role'],
+            'portal_mode' => in_array($validated['role'], ['corporate', 'wholesale'], true)
+                ? 'group'
+                : 'individual',
+            'group_type' => in_array($validated['role'], ['corporate', 'wholesale'], true)
+                ? $validated['role']
+                : null,
+            'has_individual_access' => $validated['role'] === 'individual',
+            'has_group_access' => in_array($validated['role'], ['corporate', 'wholesale'], true),
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
@@ -60,6 +72,10 @@ class AuthController extends Controller
             'message' => 'Portal account created. OTP sent to the account email.',
             'email' => $portalUser->email,
             'role' => $portalUser->role,
+            'portalMode' => $portalUser->portal_mode,
+            'groupType' => $portalUser->group_type,
+            'hasIndividualAccess' => (bool) $portalUser->has_individual_access,
+            'hasGroupAccess' => (bool) $portalUser->has_group_access,
             'expiresAt' => $challenge->expires_at->toIso8601String(),
             'devOtpCode' => $this->devOtpCode(),
         ], 201);
@@ -122,6 +138,10 @@ class AuthController extends Controller
         return [
             'id' => $portalUser->id,
             'role' => $portalUser->role,
+            'portalMode' => $portalUser->portal_mode,
+            'groupType' => $portalUser->group_type,
+            'hasIndividualAccess' => (bool) $portalUser->has_individual_access,
+            'hasGroupAccess' => (bool) $portalUser->has_group_access,
             'name' => $portalUser->name,
             'email' => $portalUser->email,
             'phone' => $portalUser->phone,

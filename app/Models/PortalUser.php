@@ -18,6 +18,10 @@ class PortalUser extends Authenticatable
 
     protected $fillable = [
         'role',
+        'portal_mode',
+        'group_type',
+        'has_individual_access',
+        'has_group_access',
         'name',
         'email',
         'phone',
@@ -34,6 +38,8 @@ class PortalUser extends Authenticatable
         return [
             'verified_at' => 'datetime',
             'notes' => 'array',
+            'has_individual_access' => 'boolean',
+            'has_group_access' => 'boolean',
         ];
     }
 
@@ -59,6 +65,10 @@ class PortalUser extends Authenticatable
 
     public function supportsTickets(): bool
     {
+        if ($this->has_individual_access || $this->group_type === 'corporate') {
+            return true;
+        }
+
         return in_array($this->role, ['individual', 'corporate'], true);
     }
 }

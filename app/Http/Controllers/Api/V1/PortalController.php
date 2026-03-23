@@ -209,21 +209,26 @@ class PortalController extends Controller
         Order::query()
             ->whereNull('portal_user_id')
             ->where('email', $portalUser->email)
-            ->where('buyer_type', $portalUser->role)
             ->update(['portal_user_id' => $portalUser->id]);
 
         TicketPurchase::query()
             ->whereNull('portal_user_id')
             ->where('email', $portalUser->email)
-            ->where('buyer_type', $portalUser->role)
             ->update(['portal_user_id' => $portalUser->id]);
     }
 
     private function ordersQuery(PortalUser $portalUser)
     {
         return Order::query()
-            ->where('email', $portalUser->email)
-            ->where('buyer_type', $portalUser->role)
+            ->where(function ($query) use ($portalUser) {
+                $query
+                    ->where('portal_user_id', $portalUser->id)
+                    ->orWhere(function ($fallback) use ($portalUser) {
+                        $fallback
+                            ->whereNull('portal_user_id')
+                            ->where('email', $portalUser->email);
+                    });
+            })
             ->where(function ($query) {
                 $query
                     ->where('payment_status', 'Paid')
@@ -234,19 +239,34 @@ class PortalController extends Controller
     private function ticketsQuery(PortalUser $portalUser)
     {
         return TicketPurchase::query()
-            ->where('email', $portalUser->email)
-            ->where('buyer_type', $portalUser->role)
+            ->where(function ($query) use ($portalUser) {
+                $query
+                    ->where('portal_user_id', $portalUser->id)
+                    ->orWhere(function ($fallback) use ($portalUser) {
+                        $fallback
+                            ->whereNull('portal_user_id')
+                            ->where('email', $portalUser->email);
+                    });
+            })
             ->where('status', '!=', 'Pending');
     }
 
     private function ownsOrder(PortalUser $portalUser, Order $order): bool
     {
-        return $order->email === $portalUser->email && $order->buyer_type === $portalUser->role;
+        if ($order->portal_user_id) {
+            return (int) $order->portal_user_id === (int) $portalUser->id;
+        }
+
+        return $order->email === $portalUser->email;
     }
 
     private function ownsTicket(PortalUser $portalUser, TicketPurchase $ticketPurchase): bool
     {
-        return $ticketPurchase->email === $portalUser->email && $ticketPurchase->buyer_type === $portalUser->role;
+        if ($ticketPurchase->portal_user_id) {
+            return (int) $ticketPurchase->portal_user_id === (int) $portalUser->id;
+        }
+
+        return $ticketPurchase->email === $portalUser->email;
     }
 
     private function serializeOrder(Order $order): array

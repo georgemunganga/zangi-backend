@@ -1,11 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
+@source '../**/*.jsx';
+@source '../**/*.tsx';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+:root {
+    --admin-bg: #ebe7df;
+    --admin-surface: #f9f7f2;
+    --admin-surface-soft: #f2ede4;
+    --admin-surface-strong: #ffffff;
+    --admin-border: #d6d0c4;
+    --admin-ink: #172126;
+    --admin-muted: #5e6a72;
+    --admin-accent: #8a4b2f;
+    --admin-accent-soft: #f2e3db;
+    --admin-overlay: rgba(23, 33, 38, 0.34);
+}
+
+#admin-root {
+    min-height: 100vh;
 }

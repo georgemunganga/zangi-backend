@@ -1,0 +1,96 @@
+<?php
+
+namespace Tests\Feature\Api\V1\Admin;
+
+use Tests\TestCase;
+use App\Models\AdminUser;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+class AdminDocumentExportsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_admin_can_open_a_ticket_pass_document(): void
+    {
+        $token = AdminUser::factory()->create()->createToken('admin-access')->plainTextToken;
+
+        $created = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
+            'customerMode' => 'walk_in',
+            'saleType' => 'ticket',
+            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'ticketType' => 'VIP',
+            'buyerName' => 'Document Ticket Buyer',
+            'email' => 'ticket-doc@example.com',
+            'phone' => '+260971555808',
+            'quantity' => 1,
+            'priceMode' => 'standard',
+            'paymentMethod' => 'Cash',
+            'issueStatus' => 'paid',
+            'customerType' => 'Walk-in',
+            'relationshipType' => 'Walk-in',
+        ])->assertCreated();
+
+        $ticketId = $created->json('tickets.0.id');
+        $ticketCode = $created->json('tickets.0.code');
+
+        $this->withToken($token)
+            ->get("/api/v1/admin/tickets/{$ticketId}/download");
+
+        $response = $this->withToken($token)->get("/api/v1/admin/tickets/{$ticketId}/download");
+
+        $response
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+        $this->assertNotEmpty($ticketCode);
+    }
+
+    public function test_admin_can_open_an_order_invoice_document(): void
+    {
+        $token = AdminUser::factory()->create()->createToken('admin-access')->plainTextToken;
+
+        $created = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
+            'customerMode' => 'walk_in',
+            'saleType' => 'book',
+            'bookSlug' => 'zangi-flag-of-kindness',
+            'bookFormat' => 'Hardcopy',
+            'buyerName' => 'Document Book Buyer',
+            'email' => 'book-doc@example.com',
+            'phone' => '+260971555909',
+            'quantity' => 1,
+            'priceMode' => 'custom',
+            'customUnitPrice' => 420,
+            'paymentMethod' => 'Card',
+            'issueStatus' => 'reserved',
+            'customerType' => 'Individual',
+            'relationshipType' => 'Walk-in',
+        ])->assertCreated();
+
+        $orderId = $created->json('order.id');
+        $orderReference = $created->json('order.reference');
+
+        $this->withToken($token)
+            ->get("/api/v1/admin/orders/{$orderId}/invoice")
+            ->assertOk()
+            ->assertHeader('content-type', 'text/html; charset=UTF-8')
+            ->assertSee('Invoice')
+            ->assertSee($orderReference);
+    }
+
+    public function test_admin_can_export_reports_as_csv_and_print_view(): void
+    {
+        $token = AdminUser::factory()->create()->createToken('admin-access')->plainTextToken;
+
+        $this->withToken($token)
+            ->get('/api/v1/admin/reports/export?period=weekly&format=csv')
+            ->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+
+        $this->withToken($token)
+            ->get('/api/v1/admin/reports/export?period=weekly&format=print')
+            ->assertOk()
+            ->assertHeader('content-type', 'text/html; charset=UTF-8')
+            ->assertSee('Weekly Summary');
+    }
+}

@@ -30,7 +30,7 @@ class PortalOtpMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.portal-otp',
+            view: 'emails.portal-otp',
             with: [
                 'portalUser' => $this->portalUser,
                 'code' => $this->code,

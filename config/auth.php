@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AdminUser;
 use App\Models\PortalUser;
 
 return [
@@ -47,6 +48,11 @@ return [
             'driver' => 'sanctum',
             'provider' => 'portal_users',
         ],
+
+        'admin' => [
+            'driver' => 'sanctum',
+            'provider' => 'admin_users',
+        ],
     ],
 
     /*
@@ -70,6 +76,11 @@ return [
         'portal_users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', PortalUser::class),
+        ],
+
+        'admin_users' => [
+            'driver' => 'eloquent',
+            'model' => AdminUser::class,
         ],
 
         // 'portal_users' => [
@@ -100,6 +111,13 @@ return [
     'passwords' => [
         'portal_users' => [
             'provider' => 'portal_users',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'admin_users' => [
+            'provider' => 'admin_users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
             'throttle' => 60,

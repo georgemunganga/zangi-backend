@@ -17,6 +17,7 @@ class Order extends Model
         'email',
         'phone',
         'organization_name',
+        'buyer_name',
         'product_slug',
         'product_title',
         'format',
@@ -29,8 +30,10 @@ class Order extends Model
         'current_step',
         'payment_status',
         'payment_method',
+        'source',
         'download_ready',
         'download_path',
+        'admin_notes',
     ];
 
     protected function casts(): array

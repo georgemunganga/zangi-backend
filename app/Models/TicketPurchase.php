@@ -31,9 +31,12 @@ class TicketPurchase extends Model
         'unit_price',
         'total',
         'status',
+        'used_at',
+        'source',
         'ticket_code',
         'qr_path',
         'pass_path',
+        'admin_notes',
     ];
 
     protected function casts(): array
@@ -41,6 +44,7 @@ class TicketPurchase extends Model
         return [
             'unit_price' => 'decimal:2',
             'total' => 'decimal:2',
+            'used_at' => 'datetime',
         ];
     }
 

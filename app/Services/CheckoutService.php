@@ -2,29 +2,35 @@
 
 namespace App\Services;
 
+use Throwable;
 use App\Models\Order;
 use App\Models\PortalUser;
+use App\Mail\BookOrderConfirmationMail;
 use App\Models\PaymentIntent;
 use App\Models\TicketPurchase;
+use Illuminate\Support\Facades\Mail;
+use App\Support\PortalProfileDefaults;
+use App\Mail\EventTicketConfirmationMail;
 use Illuminate\Support\Str;
 
 class CheckoutService
 {
     public function __construct(
         private readonly CurrencyService $currencyService,
+        private readonly OtpService $otpService,
     ) {
     }
 
     public function createPendingBookOrder(array $book, array $format, array $payload): array
     {
-        $portalUser = $this->findPortalUser($payload['email']);
+        $portalUser = $this->findOrCreatePortalUserForPurchase($payload);
         $unitPrice = $this->currencyService->convertUsdToCurrency((float) $format['base_price_usd'], $payload['currency']);
         $quantity = (int) $payload['quantity'];
         $total = round($unitPrice * $quantity, 2);
 
         $order = Order::create([
             'reference' => $this->makeReference('ZG'),
-            'portal_user_id' => $portalUser?->id,
+            'portal_user_id' => $portalUser->id,
             'buyer_type' => $payload['buyerType'],
             'email' => $payload['email'],
             'phone' => $payload['phone'],
@@ -70,13 +76,12 @@ class CheckoutService
 
     public function createCashOnDeliveryBookOrder(array $book, array $format, array $payload): Order
     {
-        $portalUser = $this->findPortalUser($payload['email']);
+        $portalUser = $this->findOrCreatePortalUserForPurchase($payload);
         $unitPrice = $this->currencyService->convertUsdToCurrency((float) $format['base_price_usd'], $payload['currency']);
         $quantity = (int) $payload['quantity'];
-
-        return Order::create([
+        $order = Order::create([
             'reference' => $this->makeReference('ZG'),
-            'portal_user_id' => $portalUser?->id,
+            'portal_user_id' => $portalUser->id,
             'buyer_type' => $payload['buyerType'],
             'email' => $payload['email'],
             'phone' => $payload['phone'],
@@ -96,18 +101,23 @@ class CheckoutService
             'download_ready' => false,
             'download_path' => null,
         ]);
+
+        $this->otpService->issueChallenge($portalUser);
+        $this->sendBookOrderConfirmation($portalUser, $order);
+
+        return $order;
     }
 
     public function createPendingTicketPurchase(array $event, array $ticketType, array $payload): array
     {
-        $portalUser = $this->findPortalUser($payload['email']);
+        $portalUser = $this->findOrCreatePortalUserForPurchase($payload);
         $unitPrice = $this->currencyService->convertUsdToCurrency((float) $ticketType['base_price_usd'], $payload['currency']);
         $quantity = (int) $payload['quantity'];
         $total = round($unitPrice * $quantity, 2);
 
         $ticketPurchase = TicketPurchase::create([
             'reference' => $this->makeReference('ZT'),
-            'portal_user_id' => $portalUser?->id,
+            'portal_user_id' => $portalUser->id,
             'buyer_type' => $payload['buyerType'],
             'email' => $payload['email'],
             'phone' => $payload['phone'],
@@ -155,6 +165,7 @@ class CheckoutService
             $order = Order::query()->findOrFail($paymentIntent->purchase_id);
             $timeline = $order->timeline ?: $this->orderTimeline($order->format);
             $isDigital = $order->format === 'digital';
+            $shouldIssueOtp = $order->payment_status !== 'Paid';
 
             $order->forceFill([
                 'payment_status' => 'Paid',
@@ -163,16 +174,33 @@ class CheckoutService
                 'download_ready' => $isDigital,
             ])->save();
 
+            if ($shouldIssueOtp) {
+                $portalUser = $order->portalUser ?: PortalUser::query()->find($order->portal_user_id);
+                if ($portalUser) {
+                    $this->otpService->issueChallenge($portalUser);
+                    $this->sendBookOrderConfirmation($portalUser, $order);
+                }
+            }
+
             return ['purchaseType' => 'book-order', 'purchase' => $order];
         }
 
         $ticketPurchase = TicketPurchase::query()->findOrFail($paymentIntent->purchase_id);
+        $shouldIssueOtp = $ticketPurchase->status !== 'Ticket Ready';
         $ticketPurchase->forceFill([
             'status' => 'Ticket Ready',
             'ticket_code' => $ticketPurchase->ticket_code ?: $this->makeReference('PASS'),
             'pass_path' => $ticketPurchase->pass_path ?: "passes/tickets/{$ticketPurchase->reference}.pdf",
             'qr_path' => $ticketPurchase->qr_path ?: "passes/tickets/{$ticketPurchase->reference}.png",
         ])->save();
+
+        if ($shouldIssueOtp) {
+            $portalUser = $ticketPurchase->portalUser ?: PortalUser::query()->find($ticketPurchase->portal_user_id);
+            if ($portalUser) {
+                $this->otpService->issueChallenge($portalUser);
+                $this->sendEventTicketConfirmation($portalUser, $ticketPurchase);
+            }
+        }
 
         return ['purchaseType' => 'event-ticket', 'purchase' => $ticketPurchase];
     }
@@ -184,13 +212,101 @@ class CheckoutService
             : ['Received', 'Confirmed', 'Processing', 'Shipped', 'Delivered'];
     }
 
-    private function findPortalUser(string $email): ?PortalUser
+    private function findOrCreatePortalUserForPurchase(array $payload): PortalUser
     {
-        return PortalUser::query()->where('email', strtolower(trim($email)))->first();
+        $email = strtolower(trim((string) $payload['email']));
+        $buyerType = (string) $payload['buyerType'];
+        $organizationName = $this->normalizeOptionalString($payload['organizationName'] ?? null);
+        $phone = trim((string) ($payload['phone'] ?? ''));
+
+        $portalUser = PortalUser::query()->firstOrNew([
+            'email' => $email,
+        ]);
+
+        $legacyRole = $this->determineLegacyRole($portalUser, $buyerType);
+        $defaults = PortalProfileDefaults::forRole($legacyRole);
+        $hasGroupAccess = (bool) $portalUser->has_group_access || in_array($buyerType, ['corporate', 'wholesale'], true);
+        $hasIndividualAccess = (bool) $portalUser->has_individual_access || $buyerType === 'individual';
+
+        $portalUser->fill([
+            'role' => $legacyRole,
+            'portal_mode' => $hasGroupAccess ? 'group' : 'individual',
+            'group_type' => $this->determineGroupType($portalUser, $buyerType),
+            'has_individual_access' => $hasIndividualAccess,
+            'has_group_access' => $hasGroupAccess,
+            'name' => $portalUser->name ?: $this->defaultPortalName($email, $buyerType, $organizationName),
+            'phone' => $phone !== '' ? $phone : ($portalUser->phone ?: 'Pending update'),
+            'organization_name' => $organizationName ?: $portalUser->organization_name,
+            'headline' => $defaults['headline'],
+            'notes' => $defaults['notes'],
+        ]);
+
+        $portalUser->save();
+
+        return $portalUser;
+    }
+
+    private function determineLegacyRole(PortalUser $portalUser, string $buyerType): string
+    {
+        if (in_array($buyerType, ['corporate', 'wholesale'], true)) {
+            return $buyerType;
+        }
+
+        if (in_array($portalUser->role, ['corporate', 'wholesale'], true)) {
+            return $portalUser->role;
+        }
+
+        return 'individual';
+    }
+
+    private function determineGroupType(PortalUser $portalUser, string $buyerType): ?string
+    {
+        if (in_array($buyerType, ['corporate', 'wholesale'], true)) {
+            return $buyerType;
+        }
+
+        return $portalUser->group_type ?: null;
+    }
+
+    private function defaultPortalName(string $email, string $buyerType, ?string $organizationName): string
+    {
+        if ($organizationName && in_array($buyerType, ['corporate', 'wholesale'], true)) {
+            return $organizationName;
+        }
+
+        $localPart = Str::before($email, '@');
+        $normalized = preg_replace('/[._-]+/', ' ', $localPart) ?: 'Portal User';
+
+        return Str::title(trim($normalized));
+    }
+
+    private function normalizeOptionalString(mixed $value): ?string
+    {
+        $normalized = trim((string) $value);
+
+        return $normalized !== '' ? $normalized : null;
     }
 
     private function makeReference(string $prefix): string
     {
         return $prefix.'-'.Str::upper(Str::random(8));
+    }
+
+    private function sendBookOrderConfirmation(PortalUser $portalUser, Order $order): void
+    {
+        try {
+            Mail::to($portalUser->email)->send(new BookOrderConfirmationMail($portalUser, $order));
+        } catch (Throwable $error) {
+            report($error);
+        }
+    }
+
+    private function sendEventTicketConfirmation(PortalUser $portalUser, TicketPurchase $ticketPurchase): void
+    {
+        try {
+            Mail::to($portalUser->email)->send(new EventTicketConfirmationMail($portalUser, $ticketPurchase));
+        } catch (Throwable $error) {
+            report($error);
+        }
     }
 }

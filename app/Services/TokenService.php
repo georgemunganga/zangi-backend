@@ -13,10 +13,13 @@ class TokenService
     public function issueTokenPair(PortalUser $portalUser): array
     {
         $accessToken = $portalUser->createToken('portal-access')->plainTextToken;
-        $plainRefreshToken = Str::random(80);
+        $refreshTokenLookup = Str::random(24);
+        $refreshTokenSecret = Str::random(80);
+        $plainRefreshToken = $refreshTokenLookup.'.'.$refreshTokenSecret;
 
         RefreshToken::create([
             'portal_user_id' => $portalUser->id,
+            'token_lookup' => hash('sha256', $refreshTokenLookup),
             'token_hash' => Hash::make($plainRefreshToken),
             'expires_at' => now()->addDays(30),
         ]);
@@ -31,12 +34,26 @@ class TokenService
 
     public function refresh(string $plainRefreshToken): array
     {
+        $lookup = Str::before($plainRefreshToken, '.');
+
+        if ($lookup === '' || ! str_contains($plainRefreshToken, '.')) {
+            throw ValidationException::withMessages([
+                'refreshToken' => 'The refresh token is invalid or has expired.',
+            ]);
+        }
+
         $refreshToken = RefreshToken::query()
+            ->where('token_lookup', hash('sha256', $lookup))
             ->whereNull('revoked_at')
-            ->get()
-            ->first(fn (RefreshToken $token): bool => Hash::check($plainRefreshToken, $token->token_hash));
+            ->first();
 
         if (! $refreshToken || $refreshToken->expires_at->isPast()) {
+            throw ValidationException::withMessages([
+                'refreshToken' => 'The refresh token is invalid or has expired.',
+            ]);
+        }
+
+        if (! Hash::check($plainRefreshToken, $refreshToken->token_hash)) {
             throw ValidationException::withMessages([
                 'refreshToken' => 'The refresh token is invalid or has expired.',
             ]);

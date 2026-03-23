@@ -16,16 +16,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        if (Schema::hasTable('users')) {
+        if (app()->environment('local') && Schema::hasTable('users')) {
             User::factory()->create([
                 'name' => 'Test User',
                 'email' => 'test@example.com',
             ]);
         }
 
-        if ($this->command?->getOutput() && app()->environment('local')) {
+        if (Schema::hasTable('admin_users')) {
             $this->call(AdminUserSeeder::class);
         }
     }

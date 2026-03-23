@@ -43,6 +43,13 @@ class CatalogService
         return [$book, $format];
     }
 
+    public function assertBookFormatAvailableForCurrency(string $currency, string $formatType): void
+    {
+        if (strtoupper($currency) === 'ZMW' && $formatType === 'digital') {
+            throw new InvalidArgumentException('Digital book orders are not available for Zambia checkout.');
+        }
+    }
+
     public function requireEventTicketType(string $slug, string $ticketTypeId): array
     {
         $event = $this->findEvent($slug);
@@ -85,10 +92,14 @@ class CatalogService
             return ['card'];
         }
 
+        if ($formatType === 'digital') {
+            return [];
+        }
+
         if ($formatType === 'hardcopy') {
             return ['mobile-money', 'card', 'cash-on-delivery'];
         }
 
-        return ['mobile-money', 'card'];
+        return [];
     }
 }

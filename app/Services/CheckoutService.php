@@ -218,54 +218,33 @@ class CheckoutService
         $buyerType = (string) $payload['buyerType'];
         $organizationName = $this->normalizeOptionalString($payload['organizationName'] ?? null);
         $phone = trim((string) ($payload['phone'] ?? ''));
+        $portalUser = PortalUser::query()
+            ->where('email', $email)
+            ->first();
 
-        $portalUser = PortalUser::query()->firstOrNew([
-            'email' => $email,
-        ]);
+        if ($portalUser) {
+            return $portalUser;
+        }
 
-        $legacyRole = $this->determineLegacyRole($portalUser, $buyerType);
-        $defaults = PortalProfileDefaults::forRole($legacyRole);
-        $hasGroupAccess = (bool) $portalUser->has_group_access || in_array($buyerType, ['corporate', 'wholesale'], true);
-        $hasIndividualAccess = (bool) $portalUser->has_individual_access || $buyerType === 'individual';
+        $role = in_array($buyerType, ['corporate', 'wholesale'], true)
+            ? $buyerType
+            : 'individual';
+        $defaults = PortalProfileDefaults::forRole($role);
+        $hasGroupAccess = in_array($buyerType, ['corporate', 'wholesale'], true);
 
-        $portalUser->fill([
-            'role' => $legacyRole,
+        return PortalUser::query()->create([
+            'role' => $role,
             'portal_mode' => $hasGroupAccess ? 'group' : 'individual',
-            'group_type' => $this->determineGroupType($portalUser, $buyerType),
-            'has_individual_access' => $hasIndividualAccess,
+            'group_type' => $hasGroupAccess ? $buyerType : null,
+            'has_individual_access' => $buyerType === 'individual',
             'has_group_access' => $hasGroupAccess,
-            'name' => $portalUser->name ?: $this->defaultPortalName($email, $buyerType, $organizationName),
-            'phone' => $phone !== '' ? $phone : ($portalUser->phone ?: 'Pending update'),
-            'organization_name' => $organizationName ?: $portalUser->organization_name,
+            'name' => $this->defaultPortalName($email, $buyerType, $organizationName),
+            'email' => $email,
+            'phone' => $phone !== '' ? $phone : 'Pending update',
+            'organization_name' => $organizationName,
             'headline' => $defaults['headline'],
             'notes' => $defaults['notes'],
         ]);
-
-        $portalUser->save();
-
-        return $portalUser;
-    }
-
-    private function determineLegacyRole(PortalUser $portalUser, string $buyerType): string
-    {
-        if (in_array($buyerType, ['corporate', 'wholesale'], true)) {
-            return $buyerType;
-        }
-
-        if (in_array($portalUser->role, ['corporate', 'wholesale'], true)) {
-            return $portalUser->role;
-        }
-
-        return 'individual';
-    }
-
-    private function determineGroupType(PortalUser $portalUser, string $buyerType): ?string
-    {
-        if (in_array($buyerType, ['corporate', 'wholesale'], true)) {
-            return $buyerType;
-        }
-
-        return $portalUser->group_type ?: null;
     }
 
     private function defaultPortalName(string $email, string $buyerType, ?string $organizationName): string

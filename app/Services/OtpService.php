@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class OtpService
 {
+    private const MAX_VERIFICATION_ATTEMPTS = 5;
+
     public function issueChallenge(PortalUser $portalUser): PortalOtpChallenge
     {
         PortalOtpChallenge::query()
@@ -54,9 +56,27 @@ class OtpService
             ]);
         }
 
+        if ($challenge->attempts >= self::MAX_VERIFICATION_ATTEMPTS) {
+            throw ValidationException::withMessages([
+                'code' => 'This OTP has been locked due to too many invalid attempts.',
+            ]);
+        }
+
         $challenge->increment('attempts');
 
         if (! Hash::check($code, $challenge->code_hash)) {
+            $challenge->refresh();
+
+            if ($challenge->attempts >= self::MAX_VERIFICATION_ATTEMPTS) {
+                $challenge->forceFill([
+                    'consumed_at' => now(),
+                ])->save();
+
+                throw ValidationException::withMessages([
+                    'code' => 'This OTP has been locked due to too many invalid attempts.',
+                ]);
+            }
+
             throw ValidationException::withMessages([
                 'code' => 'The OTP code is incorrect.',
             ]);

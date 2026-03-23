@@ -30,7 +30,7 @@ class PaymentController extends Controller
             'phone' => ['required', 'string', 'max:32'],
             'channel' => ['required', 'in:mobile-money,card'],
             'currency' => ['required', 'in:ZMW,USD'],
-            'returnPath' => ['required', 'string', 'max:2048'],
+            'returnPath' => ['required', 'string', 'max:2048', 'regex:/^\/(?!\/)[^\s]*$/'],
             'customerName' => ['nullable', 'string', 'max:255'],
             'metadata' => ['required', 'array'],
         ]);
@@ -45,6 +45,10 @@ class PaymentController extends Controller
                 [$book, $format] = $catalogService->requireBookFormat(
                     (string) data_get($validated, 'metadata.productSlug'),
                     (string) $formatType,
+                );
+                $catalogService->assertBookFormatAvailableForCurrency(
+                    $validated['currency'],
+                    $format['type'],
                 );
 
                 $catalogService->assertPaymentMethodAllowed(
@@ -139,20 +143,11 @@ class PaymentController extends Controller
             return response()->json(['message' => $exception->getMessage()], 500);
         }
 
-        $paymentIntent->forceFill([
-            'status' => $verification['paid'] ? 'Paid' : ($verification['pending'] ? 'Pending' : 'Failed'),
-            'verified_at' => $verification['paid'] ? now() : $paymentIntent->verified_at,
-            'lenco_response' => $verification['lencoResponse'],
-        ])->save();
-
-        $purchase = null;
-        $purchaseType = $paymentIntent->purchase_type;
-
-        if ($verification['paid']) {
-            $finalized = $checkoutService->finalizePaymentIntent($paymentIntent);
-            $purchaseType = $finalized['purchaseType'];
-            $purchase = $finalized['purchase'];
-        }
+        [$purchaseType, $purchase] = $this->applyVerification(
+            $paymentIntent,
+            $verification,
+            $checkoutService,
+        );
 
         return response()->json($this->verificationPayload($paymentIntent, $verification, $purchaseType, $purchase));
     }
@@ -182,17 +177,45 @@ class PaymentController extends Controller
         $paid = in_array($status, ['successful', 'success', 'paid', 'completed'], true);
         $pending = in_array($status, ['pending', 'processing', 'confirmation_pending'], true);
 
-        $paymentIntent->forceFill([
-            'status' => $paid ? 'Paid' : ($pending ? 'Pending' : 'Failed'),
-            'verified_at' => $paid ? now() : $paymentIntent->verified_at,
-            'lenco_response' => $request->all(),
-        ])->save();
-
         if ($paid) {
-            $checkoutService->finalizePaymentIntent($paymentIntent);
+            try {
+                $verification = $lencoService->verifyCollection($paymentIntent);
+            } catch (RuntimeException $exception) {
+                return response()->json(['message' => $exception->getMessage()], 500);
+            }
+
+            $this->applyVerification($paymentIntent, $verification, $checkoutService);
+        } else {
+            $paymentIntent->forceFill([
+                'status' => $pending ? 'Pending' : 'Failed',
+                'lenco_response' => $request->all(),
+            ])->save();
         }
 
         return response()->json(['received' => true]);
+    }
+
+    private function applyVerification(
+        PaymentIntent $paymentIntent,
+        array $verification,
+        CheckoutService $checkoutService
+    ): array {
+        $paymentIntent->forceFill([
+            'status' => $verification['paid'] ? 'Paid' : ($verification['pending'] ? 'Pending' : 'Failed'),
+            'verified_at' => $verification['paid'] ? now() : $paymentIntent->verified_at,
+            'lenco_response' => $verification['lencoResponse'],
+        ])->save();
+
+        $purchase = null;
+        $purchaseType = $paymentIntent->purchase_type;
+
+        if ($verification['paid']) {
+            $finalized = $checkoutService->finalizePaymentIntent($paymentIntent);
+            $purchaseType = $finalized['purchaseType'];
+            $purchase = $finalized['purchase'];
+        }
+
+        return [$purchaseType, $purchase];
     }
 
     private function verificationPayload(

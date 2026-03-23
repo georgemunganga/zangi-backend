@@ -25,6 +25,10 @@ class BookCheckoutController extends Controller
                 $request->validated('productSlug'),
                 $request->validated('formatType'),
             );
+            $catalogService->assertBookFormatAvailableForCurrency(
+                $request->validated('currency'),
+                $request->validated('formatType'),
+            );
 
             $catalogService->assertPaymentMethodAllowed(
                 'book-order',

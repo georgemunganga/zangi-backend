@@ -12,6 +12,7 @@ class RefreshToken extends Model
 
     protected $fillable = [
         'portal_user_id',
+        'token_lookup',
         'token_hash',
         'expires_at',
         'revoked_at',

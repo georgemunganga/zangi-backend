@@ -10,6 +10,9 @@ use RuntimeException;
 
 class LencoService
 {
+    private const PAID_STATUSES = ['successful', 'success', 'paid', 'completed'];
+    private const PENDING_STATUSES = ['pending', 'processing', 'confirmation_pending'];
+
     public function buildWidgetIntent(PaymentIntent $paymentIntent, array $channels): array
     {
         $publicKey = (string) config('services.lenco.public_key');
@@ -46,16 +49,59 @@ class LencoService
 
         $payload = $response->json() ?? [];
         $status = strtolower((string) data_get($payload, 'data.status', data_get($payload, 'status', 'pending')));
-        $paid = in_array($status, ['successful', 'success', 'paid', 'completed'], true);
-        $pending = in_array($status, ['pending', 'processing', 'confirmation_pending'], true);
+        $reportedAmount = $this->normalizeAmount(
+            data_get($payload, 'data.amount', data_get($payload, 'amount'))
+        );
+        $expectedAmount = $this->normalizeAmount($paymentIntent->amount);
+        $reportedCurrency = strtoupper((string) data_get(
+            $payload,
+            'data.currency',
+            data_get($payload, 'currency', '')
+        ));
+        $expectedCurrency = strtoupper((string) $paymentIntent->currency);
+        $reportedMethod = $this->normalizePaymentMethod((string) data_get(
+            $payload,
+            'data.channel',
+            data_get(
+                $payload,
+                'channel',
+                data_get(
+                    $payload,
+                    'data.payment_method',
+                    data_get($payload, 'payment_method', '')
+                )
+            )
+        ));
+        $expectedMethod = $this->normalizePaymentMethod((string) $paymentIntent->payment_method);
+        $rawPaid = in_array($status, self::PAID_STATUSES, true);
+        $rawPending = in_array($status, self::PENDING_STATUSES, true);
+        $integrityErrors = [];
+
+        if ($rawPaid && ($reportedAmount === null || $expectedAmount === null || abs($reportedAmount - $expectedAmount) > 0.009)) {
+            $integrityErrors[] = 'amount_mismatch';
+        }
+
+        if ($rawPaid && ($reportedCurrency === '' || $reportedCurrency !== $expectedCurrency)) {
+            $integrityErrors[] = 'currency_mismatch';
+        }
+
+        if ($rawPaid && $reportedMethod !== '' && $reportedMethod !== $expectedMethod) {
+            $integrityErrors[] = 'payment_method_mismatch';
+        }
+
+        $integrityOk = $integrityErrors === [];
+        $paid = $rawPaid && $integrityOk;
+        $pending = ! $paid && $rawPending;
 
         return [
             'reference' => $paymentIntent->reference,
             'status' => $paid ? 'successful' : ($pending ? 'pending' : 'failed'),
             'paid' => $paid,
             'pending' => $pending,
+            'integrity_ok' => $integrityOk,
+            'integrity_errors' => $integrityErrors,
             'provider' => 'lenco',
-            'currency' => data_get($payload, 'data.currency', $paymentIntent->currency),
+            'currency' => $reportedCurrency !== '' ? $reportedCurrency : $paymentIntent->currency,
             'verifiedAt' => now()->toIso8601String(),
             'lencoResponse' => $payload,
             'maskedAccount' => data_get($payload, 'data.customer.masked_account', ''),
@@ -91,10 +137,29 @@ class LencoService
             return $base;
         }
 
-        if (preg_match('/^https?:\/\//i', $returnPath)) {
-            return $returnPath;
+        $normalizedPath = trim($returnPath);
+
+        if (! str_starts_with($normalizedPath, '/') || str_starts_with($normalizedPath, '//')) {
+            return $base;
         }
 
-        return $base.'/'.ltrim($returnPath, '/');
+        return $base.$normalizedPath;
+    }
+
+    private function normalizeAmount(mixed $value): ?float
+    {
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        return round((float) $value, 2);
+    }
+
+    private function normalizePaymentMethod(string $value): string
+    {
+        $normalized = strtolower(trim($value));
+        $normalized = str_replace(['_', ' '], '-', $normalized);
+
+        return preg_replace('/-+/', '-', $normalized) ?: '';
     }
 }

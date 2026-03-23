@@ -25,10 +25,19 @@
     ensure_deploy_path
     clone_or_attach_repository
     ensure_env_file
+    run_migrations
+    run_seeders
+@endstory
+
+@story('deploy_full', ['on' => 'production'])
+    ensure_deploy_path
+    clone_or_attach_repository
+    ensure_env_file
     install_dependencies
     build_frontend_assets
     generate_app_key_if_missing
     run_migrations
+    run_seeders
     optimize_application
     link_public_directory
     restart_queue_if_enabled
@@ -71,8 +80,8 @@
     fi
 
     git fetch origin "{{ $deployBranch }}" --prune
-    git checkout "{{ $deployBranch }}"
-    git reset --hard "origin/{{ $deployBranch }}"
+    git checkout "{{ $deployBranch }}" >/dev/null 2>&1 || git checkout -b "{{ $deployBranch }}"
+    git pull --ff-only origin "{{ $deployBranch }}"
 @endtask
 
 @task('ensure_env_file')
@@ -125,6 +134,11 @@
 @task('run_migrations')
     cd "{{ $deployPath }}"
     {{ $phpBin }} artisan migrate --force
+@endtask
+
+@task('run_seeders')
+    cd "{{ $deployPath }}"
+    {{ $phpBin }} artisan db:seed --force
 @endtask
 
 @task('optimize_application')

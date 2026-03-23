@@ -29,7 +29,7 @@ class CreateBookOrderIntentRequest extends FormRequest
             ],
             'currency' => ['required', Rule::in(['ZMW', 'USD'])],
             'paymentMethod' => ['required', Rule::in(['mobile-money', 'card'])],
-            'returnPath' => ['required', 'string', 'max:2048'],
+            'returnPath' => ['required', 'string', 'max:2048', 'regex:/^\/(?!\/)[^\s]*$/'],
         ];
     }
 

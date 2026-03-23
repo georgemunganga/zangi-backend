@@ -19,10 +19,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::prefix('auth')->group(function (): void {
-        Route::post('/request-otp', [AuthController::class, 'requestOtp']);
-        Route::post('/register', [AuthController::class, 'register']);
-        Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
-        Route::post('/refresh', [AuthController::class, 'refresh']);
+        Route::post('/request-otp', [AuthController::class, 'requestOtp'])
+            ->middleware('throttle:portal-otp-request');
+        Route::post('/register', [AuthController::class, 'register'])
+            ->middleware('throttle:portal-register');
+        Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])
+            ->middleware('throttle:portal-otp-verify');
+        Route::post('/refresh', [AuthController::class, 'refresh'])
+            ->middleware('throttle:portal-token-refresh');
 
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/logout', [AuthController::class, 'logout']);
@@ -30,15 +34,18 @@ Route::prefix('v1')->group(function (): void {
         });
     });
 
-    Route::prefix('checkout')->group(function (): void {
+    Route::prefix('checkout')->middleware('throttle:public-checkout')->group(function (): void {
         Route::post('/book-orders/online-intent', [BookCheckoutController::class, 'createOnlineIntent']);
         Route::post('/book-orders/cod', [BookCheckoutController::class, 'createCashOnDeliveryOrder']);
         Route::post('/event-tickets/online-intent', [EventTicketCheckoutController::class, 'createOnlineIntent']);
     });
 
-    Route::post('/payments/lenco/intent', [PaymentController::class, 'intent']);
-    Route::post('/payments/lenco/verify', [PaymentController::class, 'verify']);
-    Route::post('/payments/lenco/webhook', [PaymentController::class, 'webhook']);
+    Route::post('/payments/lenco/intent', [PaymentController::class, 'intent'])
+        ->middleware('throttle:payment-intents');
+    Route::post('/payments/lenco/verify', [PaymentController::class, 'verify'])
+        ->middleware('throttle:payment-verify');
+    Route::post('/payments/lenco/webhook', [PaymentController::class, 'webhook'])
+        ->middleware('throttle:lenco-webhook');
 
     Route::middleware('auth:sanctum')->prefix('portal')->group(function (): void {
         Route::get('/overview', [PortalController::class, 'overview']);
@@ -52,7 +59,8 @@ Route::prefix('v1')->group(function (): void {
 
     Route::prefix('admin')->group(function (): void {
         Route::prefix('auth')->group(function (): void {
-            Route::post('/login', [AdminAuthController::class, 'login']);
+            Route::post('/login', [AdminAuthController::class, 'login'])
+                ->middleware('throttle:admin-login');
 
             Route::middleware('auth:admin')->group(function (): void {
                 Route::post('/logout', [AdminAuthController::class, 'logout']);

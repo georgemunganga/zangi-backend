@@ -21,24 +21,17 @@ class AuthController extends Controller
         $portalUser = PortalUser::query()
             ->where('email', $request->validated('email'))
             ->first();
+        $expiresAt = now()->addMinutes(10)->toIso8601String();
 
-        if (! $portalUser) {
-            return response()->json([
-                'message' => 'We could not find a portal account or purchase history for that email yet.',
-            ], 404);
+        if ($portalUser) {
+            $challenge = $otpService->issueChallenge($portalUser);
+            $expiresAt = $challenge->expires_at->toIso8601String();
         }
 
-        $challenge = $otpService->issueChallenge($portalUser);
-
         return response()->json([
-            'message' => 'OTP sent to the account email.',
-            'email' => $portalUser->email,
-            'role' => $portalUser->role,
-            'portalMode' => $portalUser->portal_mode,
-            'groupType' => $portalUser->group_type,
-            'hasIndividualAccess' => (bool) $portalUser->has_individual_access,
-            'hasGroupAccess' => (bool) $portalUser->has_group_access,
-            'expiresAt' => $challenge->expires_at->toIso8601String(),
+            'message' => 'If the email can receive portal access, a verification code will be sent shortly.',
+            'email' => $request->validated('email'),
+            'expiresAt' => $expiresAt,
             'devOtpCode' => $this->devOtpCode(),
         ], 202);
     }

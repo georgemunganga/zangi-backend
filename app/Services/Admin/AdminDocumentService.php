@@ -134,13 +134,18 @@ class AdminDocumentService
 
     private function ticketTemplatePath(): string
     {
-        $templatePath = storage_path('app/public/Zangi.pdf');
+        $candidates = [
+            storage_path('app/public/Ticket.pdf'),
+            public_path('Ticket.pdf'),
+        ];
 
-        if (! is_file($templatePath)) {
-            throw new InvalidArgumentException('The ticket PDF template is not available.');
+        foreach ($candidates as $templatePath) {
+            if (is_file($templatePath)) {
+                return $templatePath;
+            }
         }
 
-        return $templatePath;
+        throw new InvalidArgumentException('The ticket PDF template is not available.');
     }
 
     private function renderStampedTicketPdf(string $templatePath, string $ticketCode): string

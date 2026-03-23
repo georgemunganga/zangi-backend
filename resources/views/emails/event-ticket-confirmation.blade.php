@@ -43,8 +43,16 @@
             <td align="right" style="padding:8px 0;font-size:14px;line-height:22px;font-weight:700;color:#0f172a;">{{ $ticketPurchase->ticket_type_label }}</td>
         </tr>
         <tr>
+            <td style="padding:8px 0;font-size:14px;line-height:22px;color:#64748b;">Pricing round</td>
+            <td align="right" style="padding:8px 0;font-size:14px;line-height:22px;font-weight:700;color:#0f172a;">{{ $ticketPurchase->pricing_round_label ?: 'Standard' }}</td>
+        </tr>
+        <tr>
             <td style="padding:8px 0;font-size:14px;line-height:22px;color:#64748b;">Quantity</td>
             <td align="right" style="padding:8px 0;font-size:14px;line-height:22px;font-weight:700;color:#0f172a;">{{ $ticketPurchase->quantity }}</td>
+        </tr>
+        <tr>
+            <td style="padding:8px 0;font-size:14px;line-height:22px;color:#64748b;">Unit price</td>
+            <td align="right" style="padding:8px 0;font-size:14px;line-height:22px;font-weight:700;color:#0f172a;">{{ $currencySymbol }}{{ number_format((float) $ticketPurchase->unit_price, 2) }} {{ $ticketPurchase->currency }}</td>
         </tr>
         <tr>
             <td style="padding:8px 0;font-size:14px;line-height:22px;color:#64748b;">Ticket code</td>

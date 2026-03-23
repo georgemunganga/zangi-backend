@@ -34,7 +34,7 @@ class OtpService
         try {
             Mail::to($portalUser->email)->send(new PortalOtpMail($portalUser, $code));
         } catch (Throwable $error) {
-            if (! env('PORTAL_FIXED_OTP')) {
+            if ($this->fixedCode() === null) {
                 throw $error;
             }
         }
@@ -91,12 +91,22 @@ class OtpService
 
     private function generateCode(): string
     {
-        $fixedCode = env('PORTAL_FIXED_OTP');
-
-        if ($fixedCode) {
-            return (string) $fixedCode;
+        $fixedCode = $this->fixedCode();
+        if ($fixedCode !== null) {
+            return $fixedCode;
         }
 
         return (string) random_int(100000, 999999);
+    }
+
+    private function fixedCode(): ?string
+    {
+        if (! app()->environment('testing')) {
+            return null;
+        }
+
+        $fixedCode = trim((string) env('PORTAL_FIXED_OTP', ''));
+
+        return $fixedCode !== '' ? $fixedCode : null;
     }
 }

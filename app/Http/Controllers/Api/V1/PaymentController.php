@@ -84,9 +84,10 @@ class PaymentController extends Controller
                 throw new InvalidArgumentException('That buyer type is not allowed for event tickets.');
             }
 
-            [$event, $ticketType] = $catalogService->requireEventTicketType(
+            [$event, $ticketType] = $catalogService->resolveEventTicketOffer(
                 (string) data_get($validated, 'metadata.eventSlug'),
                 (string) data_get($validated, 'metadata.ticketTypeId'),
+                $validated['currency'],
             );
 
             $catalogService->assertPaymentMethodAllowed(

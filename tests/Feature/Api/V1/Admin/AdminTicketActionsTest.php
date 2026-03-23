@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1\Admin;
 
+use Carbon\Carbon;
 use App\Models\AdminUser;
 use App\Mail\TicketPassMail;
 use App\Models\TicketPurchase;
@@ -12,6 +13,20 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 class AdminTicketActionsTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Carbon::setTestNow(Carbon::parse('2026-04-01 10:00:00', 'Africa/Lusaka'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
 
     public function test_admin_can_mark_a_paid_ticket_as_used(): void
     {

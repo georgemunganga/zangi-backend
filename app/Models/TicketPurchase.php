@@ -24,6 +24,8 @@ class TicketPurchase extends Model
         'location_label',
         'ticket_type_id',
         'ticket_type_label',
+        'pricing_round_key',
+        'pricing_round_label',
         'ticket_holder_name',
         'buyer_name',
         'quantity',

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1\Admin;
 
+use Carbon\Carbon;
 use App\Mail\OrderDeliveryMail;
 use App\Mail\TicketPassMail;
 use App\Models\AdminUser;
@@ -13,6 +14,20 @@ use Illuminate\Support\Facades\Storage;
 class AdminOrderActionsTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Carbon::setTestNow(Carbon::parse('2026-04-01 10:00:00', 'Africa/Lusaka'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
 
     public function test_admin_can_update_and_confirm_a_book_order(): void
     {

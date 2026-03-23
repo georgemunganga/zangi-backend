@@ -20,9 +20,10 @@ class EventTicketCheckoutController extends Controller
         LencoService $lencoService
     ): JsonResponse {
         try {
-            [$event, $ticketType] = $catalogService->requireEventTicketType(
+            [$event, $ticketType] = $catalogService->resolveEventTicketOffer(
                 $request->validated('eventSlug'),
                 $request->validated('ticketTypeId'),
+                $request->validated('currency'),
             );
 
             $catalogService->assertPaymentMethodAllowed(

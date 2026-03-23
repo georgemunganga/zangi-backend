@@ -46,6 +46,14 @@
             <td style="padding:8px 0 0;font-size:14px;line-height:22px;color:#64748b;">Ticket type</td>
             <td align="right" style="padding:8px 0 0;font-size:14px;line-height:22px;font-weight:700;color:#0f172a;">{{ $ticketPurchase->ticket_type_label }}</td>
         </tr>
+        <tr>
+            <td style="padding:8px 0 0;font-size:14px;line-height:22px;color:#64748b;">Pricing round</td>
+            <td align="right" style="padding:8px 0 0;font-size:14px;line-height:22px;font-weight:700;color:#0f172a;">{{ $ticketPurchase->pricing_round_label ?: 'Standard' }}</td>
+        </tr>
+        <tr>
+            <td style="padding:8px 0 0;font-size:14px;line-height:22px;color:#64748b;">Unit price</td>
+            <td align="right" style="padding:8px 0 0;font-size:14px;line-height:22px;font-weight:700;color:#0f172a;">{{ strtoupper($ticketPurchase->currency) === 'ZMW' ? 'K ' : '$' }}{{ number_format((float) $ticketPurchase->unit_price, 2) }} {{ $ticketPurchase->currency }}</td>
+        </tr>
     </table>
 </div>
 

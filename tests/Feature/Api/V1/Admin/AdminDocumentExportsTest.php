@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1\Admin;
 
+use Carbon\Carbon;
 use Tests\TestCase;
 use App\Models\AdminUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -9,6 +10,20 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 class AdminDocumentExportsTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Carbon::setTestNow(Carbon::parse('2026-04-01 10:00:00', 'Africa/Lusaka'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
 
     public function test_admin_can_open_a_ticket_pass_document(): void
     {

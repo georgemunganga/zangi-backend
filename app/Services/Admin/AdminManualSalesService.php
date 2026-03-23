@@ -108,10 +108,10 @@ class AdminManualSalesService
         [$event, $ticketType] = $this->resolveTicketSelection((string) $payload['eventSlug'], (string) $payload['ticketType']);
         $customer = $this->resolveCustomerContext($payload);
         $quantity = (int) $payload['quantity'];
-        $unitPrice = $this->resolveUnitPrice(
+        $unitPrice = $this->resolveTicketUnitPrice(
             (string) $payload['priceMode'],
             $payload['customUnitPrice'] ?? null,
-            (float) $ticketType['base_price_usd'],
+            $ticketType,
         );
         $total = round($unitPrice * $quantity, 2);
         $paymentStatus = $this->resolvePaymentStatus((string) $payload['issueStatus'], (string) $payload['paymentMethod']);
@@ -131,6 +131,8 @@ class AdminManualSalesService
             'location_label' => $event['location_label'],
             'ticket_type_id' => $ticketType['id'],
             'ticket_type_label' => $ticketType['label'],
+            'pricing_round_key' => data_get($ticketType, 'pricing_round_key'),
+            'pricing_round_label' => data_get($ticketType, 'pricing_round_label'),
             'ticket_holder_name' => $customer['buyerName'],
             'buyer_name' => $customer['buyerName'],
             'quantity' => $quantity,
@@ -159,6 +161,8 @@ class AdminManualSalesService
                 'source' => 'admin_manual',
                 'eventSlug' => $event['slug'],
                 'ticketTypeId' => $ticketType['id'],
+                'pricingRoundKey' => data_get($ticketType, 'pricing_round_key'),
+                'pricingRoundLabel' => data_get($ticketType, 'pricing_round_label'),
                 'quantity' => $quantity,
             ],
             'lenco_response' => null,
@@ -254,7 +258,13 @@ class AdminManualSalesService
 
         foreach ($event['ticket_types'] as $candidate) {
             if ($this->matchesCatalogValue($ticketType, $candidate['id'], $candidate['label'])) {
-                return [$event, $candidate];
+                [$resolvedEvent, $resolvedTicketType] = $this->catalogService->resolveEventTicketOffer(
+                    $eventSlug,
+                    (string) $candidate['id'],
+                    $this->currencyService->siteCurrency(),
+                );
+
+                return [$resolvedEvent, $resolvedTicketType];
             }
         }
 
@@ -268,6 +278,22 @@ class AdminManualSalesService
         }
 
         return $this->currencyService->convertUsdToCurrency($basePriceUsd, $this->currencyService->siteCurrency());
+    }
+
+    private function resolveTicketUnitPrice(string $priceMode, mixed $customUnitPrice, array $ticketType): float
+    {
+        if ($priceMode === 'custom') {
+            return round((float) $customUnitPrice, 2);
+        }
+
+        if (array_key_exists('resolved_price', $ticketType)) {
+            return round((float) $ticketType['resolved_price'], 2);
+        }
+
+        return $this->currencyService->convertUsdToCurrency(
+            (float) ($ticketType['base_price_usd'] ?? 0),
+            $this->currencyService->siteCurrency(),
+        );
     }
 
     private function resolvePaymentStatus(string $issueStatus, string $paymentMethod): string

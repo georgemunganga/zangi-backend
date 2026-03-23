@@ -111,7 +111,9 @@ class CheckoutService
     public function createPendingTicketPurchase(array $event, array $ticketType, array $payload): array
     {
         $portalUser = $this->findOrCreatePortalUserForPurchase($payload);
-        $unitPrice = $this->currencyService->convertUsdToCurrency((float) $ticketType['base_price_usd'], $payload['currency']);
+        $unitPrice = array_key_exists('resolved_price', $ticketType)
+            ? round((float) $ticketType['resolved_price'], 2)
+            : $this->currencyService->convertUsdToCurrency((float) $ticketType['base_price_usd'], $payload['currency']);
         $quantity = (int) $payload['quantity'];
         $total = round($unitPrice * $quantity, 2);
 
@@ -129,6 +131,8 @@ class CheckoutService
             'location_label' => $event['location_label'],
             'ticket_type_id' => $ticketType['id'],
             'ticket_type_label' => $ticketType['label'],
+            'pricing_round_key' => data_get($ticketType, 'pricing_round_key'),
+            'pricing_round_label' => data_get($ticketType, 'pricing_round_label'),
             'ticket_holder_name' => $payload['ticketHolderName'] ?? $payload['email'],
             'buyer_name' => $payload['customerName'] ?? $payload['email'],
             'quantity' => $quantity,
@@ -151,6 +155,8 @@ class CheckoutService
             'lenco_payload' => [
                 'eventSlug' => $event['slug'],
                 'ticketTypeId' => $ticketType['id'],
+                'pricingRoundKey' => data_get($ticketType, 'pricing_round_key'),
+                'pricingRoundLabel' => data_get($ticketType, 'pricing_round_label'),
                 'quantity' => $quantity,
             ],
             'return_path' => $payload['returnPath'],

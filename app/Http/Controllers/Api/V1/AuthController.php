@@ -148,10 +148,12 @@ class AuthController extends Controller
 
     private function devOtpCode(): ?string
     {
-        if (! app()->environment('local')) {
+        if (! app()->environment('testing')) {
             return null;
         }
 
-        return env('PORTAL_FIXED_OTP') ?: null;
+        $fixedCode = trim((string) env('PORTAL_FIXED_OTP', ''));
+
+        return $fixedCode !== '' ? $fixedCode : null;
     }
 }

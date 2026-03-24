@@ -44,7 +44,7 @@
     $frontendUrl = rtrim((string) env('FRONTEND_URL', config('app.url')), '/');
     $homeUrl = $frontendUrl !== '' ? $frontendUrl : config('app.url');
     $supportEmail = config('mail.from.address');
-    $logoUrl = $homeUrl !== '' ? $homeUrl . '/images/logo-dark-Zangi.png' : null;
+    $logoUrl = $homeUrl !== '' ? $homeUrl . '/logo-white-Zangi.png' : null;
 @endphp
 <body>
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">

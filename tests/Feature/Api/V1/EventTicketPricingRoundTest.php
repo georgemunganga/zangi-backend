@@ -185,7 +185,8 @@ class EventTicketPricingRoundTest extends TestCase
         Mail::assertSent(EventTicketConfirmationMail::class, function (EventTicketConfirmationMail $mail) use ($ticketPurchase): bool {
             return $mail->hasTo('paid.ticket@gmail.com')
                 && $mail->ticketPurchase->reference === $ticketPurchase->reference
-                && $mail->ticketPurchase->pricing_round_label === 'Late';
+                && $mail->ticketPurchase->pricing_round_label === 'Late'
+                && count($mail->attachments()) === 1;
         });
     }
 

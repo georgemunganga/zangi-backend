@@ -249,7 +249,7 @@ class AdminOrderActionService
     {
         $ticketPurchase->forceFill([
             'status' => $ticketPurchase->status === 'Used' ? 'Used' : 'Ticket Ready',
-            'qr_path' => $ticketPurchase->qr_path ?: "passes/tickets/{$ticketPurchase->reference}.png",
+            'qr_path' => $ticketPurchase->qr_path ?: "passes/tickets/{$ticketPurchase->reference}.svg",
             'pass_path' => $ticketPurchase->pass_path ?: "passes/tickets/{$ticketPurchase->reference}.pdf",
         ])->save();
     }
@@ -285,7 +285,7 @@ class AdminOrderActionService
     {
         $ticketPurchase->forceFill([
             'status' => 'Ticket Ready',
-            'qr_path' => $ticketPurchase->qr_path ?: "passes/tickets/{$ticketPurchase->reference}.png",
+            'qr_path' => $ticketPurchase->qr_path ?: "passes/tickets/{$ticketPurchase->reference}.svg",
             'pass_path' => $ticketPurchase->pass_path ?: "passes/tickets/{$ticketPurchase->reference}.pdf",
         ])->save();
     }

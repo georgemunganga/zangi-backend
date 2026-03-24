@@ -159,7 +159,7 @@ class AdminTicketActionService
         $ticketPurchase->forceFill([
             'status' => 'Ticket Ready',
             'ticket_code' => $newTicketCode,
-            'qr_path' => "passes/tickets/{$newTicketCode}.png",
+            'qr_path' => "passes/tickets/{$newTicketCode}.svg",
             'pass_path' => "passes/tickets/{$newTicketCode}.pdf",
             'admin_notes' => $this->appendAdminNote($ticketPurchase->admin_notes, 'Ticket reissued with a fresh pass code.'),
         ])->save();

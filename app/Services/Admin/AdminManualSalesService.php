@@ -142,7 +142,7 @@ class AdminManualSalesService
             'status' => $isPaid ? 'Ticket Ready' : 'Pending',
             'source' => 'admin_manual',
             'ticket_code' => $this->makeReference('PASS'),
-            'qr_path' => $isPaid ? "passes/tickets/{$reference}.png" : null,
+            'qr_path' => $isPaid ? "passes/tickets/{$reference}.svg" : null,
             'pass_path' => $isPaid ? "passes/tickets/{$reference}.pdf" : null,
             'admin_notes' => $this->normalizeOptionalString($payload['notes'] ?? null),
         ]);

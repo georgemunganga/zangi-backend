@@ -6,6 +6,7 @@ use App\Models\PortalUser;
 use App\Models\TicketPurchase;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -18,6 +19,8 @@ class EventTicketConfirmationMail extends Mailable
     public function __construct(
         public PortalUser $portalUser,
         public TicketPurchase $ticketPurchase,
+        public ?string $pdfBinary = null,
+        public ?string $attachmentFilename = null,
     ) {
     }
 
@@ -42,6 +45,13 @@ class EventTicketConfirmationMail extends Mailable
 
     public function attachments(): array
     {
-        return [];
+        if (! $this->pdfBinary || ! $this->attachmentFilename) {
+            return [];
+        }
+
+        return [
+            Attachment::fromData(fn () => $this->pdfBinary, $this->attachmentFilename)
+                ->withMime('application/pdf'),
+        ];
     }
 }

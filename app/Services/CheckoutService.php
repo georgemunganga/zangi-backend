@@ -8,6 +8,7 @@ use App\Models\PortalUser;
 use App\Mail\BookOrderConfirmationMail;
 use App\Models\PaymentIntent;
 use App\Models\TicketPurchase;
+use App\Services\Admin\AdminDocumentService;
 use Illuminate\Support\Facades\Mail;
 use App\Support\PortalProfileDefaults;
 use App\Mail\EventTicketConfirmationMail;
@@ -18,6 +19,7 @@ class CheckoutService
     public function __construct(
         private readonly CurrencyService $currencyService,
         private readonly OtpService $otpService,
+        private readonly AdminDocumentService $adminDocumentService,
     ) {
     }
 
@@ -197,7 +199,7 @@ class CheckoutService
             'status' => 'Ticket Ready',
             'ticket_code' => $ticketPurchase->ticket_code ?: $this->makeReference('PASS'),
             'pass_path' => $ticketPurchase->pass_path ?: "passes/tickets/{$ticketPurchase->reference}.pdf",
-            'qr_path' => $ticketPurchase->qr_path ?: "passes/tickets/{$ticketPurchase->reference}.png",
+            'qr_path' => $ticketPurchase->qr_path ?: "passes/tickets/{$ticketPurchase->reference}.svg",
         ])->save();
 
         if ($shouldIssueOtp) {
@@ -289,7 +291,21 @@ class CheckoutService
     private function sendEventTicketConfirmation(PortalUser $portalUser, TicketPurchase $ticketPurchase): void
     {
         try {
-            Mail::to($portalUser->email)->send(new EventTicketConfirmationMail($portalUser, $ticketPurchase));
+            $attachment = null;
+
+            try {
+                $attachment = $this->adminDocumentService->ticketPassAttachment($ticketPurchase);
+                $ticketPurchase = $ticketPurchase->fresh();
+            } catch (Throwable $error) {
+                report($error);
+            }
+
+            Mail::to($portalUser->email)->send(new EventTicketConfirmationMail(
+                $portalUser,
+                $ticketPurchase,
+                $attachment['binary'] ?? null,
+                $attachment['filename'] ?? null,
+            ));
         } catch (Throwable $error) {
             report($error);
         }

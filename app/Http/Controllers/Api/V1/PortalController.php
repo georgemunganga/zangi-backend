@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\TicketPurchase;
 use App\Http\Controllers\Controller;
+use InvalidArgumentException;
+use App\Services\Admin\AdminDocumentService;
 use Illuminate\Support\Facades\Storage;
 
 class PortalController extends Controller
@@ -119,19 +121,30 @@ class PortalController extends Controller
         return response()->json($this->serializeTicket($ticketPurchase));
     }
 
-    public function downloadTicketPass(Request $request, TicketPurchase $ticketPurchase)
+    public function downloadTicketPass(
+        Request $request,
+        TicketPurchase $ticketPurchase,
+        AdminDocumentService $adminDocumentService,
+    )
     {
         /** @var PortalUser $portalUser */
         $portalUser = $request->user();
         abort_unless($this->ownsTicket($portalUser, $ticketPurchase), 404);
 
-        if (! $ticketPurchase->pass_path) {
+        if (! $ticketPurchase->ticket_code) {
             return response()->json(['message' => 'The pass file is not ready yet.'], 409);
+        }
+
+        try {
+            $adminDocumentService->ticketPassAttachment($ticketPurchase);
+            $ticketPurchase = $ticketPurchase->fresh();
+        } catch (InvalidArgumentException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 409);
         }
 
         $disk = Storage::disk(config('filesystems.default'));
 
-        if (! $disk->exists($ticketPurchase->pass_path)) {
+        if (! $ticketPurchase->pass_path || ! $disk->exists($ticketPurchase->pass_path)) {
             return response()->json(['message' => 'The pass file is not available yet.'], 404);
         }
 

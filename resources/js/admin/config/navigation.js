@@ -1,4 +1,5 @@
 import {
+    ArrowRightLeft,
     BarChart3,
     ClipboardList,
     CreditCard,
@@ -35,6 +36,14 @@ export const adminSections = [
         href: '/admin/tickets/validation',
         icon: ScanLine,
         summary: 'Validation',
+    },
+    {
+        key: 'sellers',
+        label: 'Sellers',
+        shortLabel: 'Sellers',
+        href: '/admin/sellers',
+        icon: ArrowRightLeft,
+        summary: 'Field agents',
     },
     {
         key: 'manual-sales',

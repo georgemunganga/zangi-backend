@@ -15,6 +15,7 @@ import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { AdminTicketDetailPage } from '../pages/AdminTicketDetailPage';
 import { AdminTicketsPage } from '../pages/AdminTicketsPage';
 import { AdminTicketValidationPage } from '../pages/AdminTicketValidationPage';
+import { AdminSellersPage } from '../pages/AdminSellersPage';
 
 function AdminAuthSplash() {
     return (
@@ -72,6 +73,7 @@ export function AdminRoutes() {
                     <Route element={<AdminTicketsPage />} path="tickets" />
                     <Route element={<AdminTicketDetailPage />} path="tickets/:ticketId" />
                     <Route element={<AdminTicketValidationPage />} path="tickets/validation" />
+                    <Route element={<AdminSellersPage />} path="sellers" />
                     <Route element={<AdminManualSalesPage />} path="manual-sales" />
                     <Route element={<AdminOrdersPage />} path="orders" />
                     <Route element={<AdminOrderDetailPage />} path="orders/:orderId" />

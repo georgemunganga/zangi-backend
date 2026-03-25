@@ -8,6 +8,10 @@ return [
     'allowed_origins' => array_filter([
         env('FRONTEND_URL', 'http://localhost:3000'),
         'http://127.0.0.1:3000',
+        'https://tickets.zangisworld.com',
+        'https://zangisworld.com',
+        'https://www.zangisworld.com',
+        'https://app.zangisworld.com',
     ]),
 
     'allowed_origins_patterns' => [],

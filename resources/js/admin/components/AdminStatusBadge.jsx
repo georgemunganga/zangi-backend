@@ -52,6 +52,11 @@ const toneMap = {
     wrong_event: 'border-orange-200 bg-orange-50 text-orange-700',
     unread: 'border-orange-200 bg-orange-50 text-orange-700',
     replied: 'border-teal-200 bg-teal-50 text-teal-700',
+    
+    // Seller statuses
+    active: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    inactive: 'border-amber-200 bg-amber-50 text-amber-700',
+    suspended: 'border-rose-200 bg-rose-50 text-rose-700',
 };
 
 export function AdminStatusBadge({ label, value }) {

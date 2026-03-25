@@ -83,10 +83,11 @@ export function AdminRoutes() {
                     <Route element={<AdminPaymentsPage />} path="payments" />
                     <Route element={<AdminReportsPage />} path="reports" />
                     <Route element={<AdminSettingsPage />} path="settings" />
+                    <Route path="*" element={<Navigate replace to="/admin/overview" />} />
                 </Route>
             </Route>
 
-            <Route element={<Navigate replace to="/admin/overview" />} path="*" />
+            <Route path="*" element={<Navigate replace to="/admin/overview" />} />
         </Routes>
     );
 }

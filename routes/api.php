@@ -8,8 +8,11 @@ use App\Http\Controllers\Api\V1\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\Api\V1\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Api\V1\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Api\V1\Admin\OverviewController as AdminOverviewController;
+use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Api\V1\Admin\ManualSalesController as AdminManualSalesController;
 use App\Http\Controllers\Api\V1\Admin\ContactMessageController as AdminContactMessageController;
+use App\Http\Controllers\Api\V1\Seller\AuthController as SellerAuthController;
+use App\Http\Controllers\Api\V1\Seller\SellerController;
 use App\Http\Controllers\Api\V1\BookCheckoutController;
 use App\Http\Controllers\Api\V1\ContactMessageController;
 use App\Http\Controllers\Api\V1\EventTicketCheckoutController;
@@ -71,6 +74,7 @@ Route::prefix('v1')->group(function (): void {
 
         Route::middleware('auth:admin')->group(function (): void {
             Route::get('/overview', AdminOverviewController::class);
+            Route::get('/events', [AdminEventController::class, 'index']);
             Route::post('/manual-sales', [AdminManualSalesController::class, 'store']);
             Route::post('/tickets/validate', [AdminTicketController::class, 'validateCode']);
             Route::get('/tickets', [AdminTicketController::class, 'index']);
@@ -102,6 +106,33 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/payments/{paymentIntent}/note', [AdminPaymentController::class, 'attachNote']);
             Route::get('/reports/summary', [AdminReportController::class, 'summary']);
             Route::get('/reports/export', [AdminReportController::class, 'export']);
+        });
+    });
+
+    Route::prefix('seller')->group(function (): void {
+        Route::prefix('auth')->group(function (): void {
+            Route::post('/login', [SellerAuthController::class, 'login'])
+                ->middleware('throttle:portal-otp-request');
+
+            Route::middleware('auth:sanctum')->group(function (): void {
+                Route::post('/logout', [SellerAuthController::class, 'logout']);
+                Route::get('/me', [SellerAuthController::class, 'me']);
+            });
+        });
+
+        Route::middleware('auth:sanctum')->group(function (): void {
+            Route::get('/dashboard', [SellerController::class, 'dashboard']);
+            Route::get('/sales/recent', [SellerController::class, 'recentSales']);
+            Route::get('/sales', [SellerController::class, 'sales']);
+            Route::get('/sales/{id}', [SellerController::class, 'showSale']);
+            Route::post('/sales', [SellerController::class, 'storeSale']);
+            Route::patch('/sales/{id}/sync', [SellerController::class, 'markSynced']);
+            Route::post('/sales/bulk-sync', [SellerController::class, 'bulkSync']);
+            Route::get('/ticket-types', [SellerController::class, 'ticketTypes']);
+            Route::get('/current-round', [SellerController::class, 'currentRound']);
+            Route::get('/events/active', [SellerController::class, 'activeEvent']);
+            Route::get('/events/{id}', [SellerController::class, 'event']);
+            Route::post('/sales/{id}/email/resend', [SellerController::class, 'resendEmail']);
         });
     });
 

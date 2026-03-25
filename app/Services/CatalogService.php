@@ -157,7 +157,7 @@ class CatalogService
         $lastEnd = $this->parseEventTime((string) data_get($rounds, (count($rounds) - 1).'.ends_at'), $timezone);
 
         if ($firstStart && $current->lt($firstStart)) {
-            throw new InvalidArgumentException('Ticket sales open on March 25, 2026.');
+            throw new InvalidArgumentException('Ticket sales open on '.$firstStart->format('F j, Y').'.');
         }
 
         foreach ($rounds as $round) {

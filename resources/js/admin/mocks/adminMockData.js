@@ -7,13 +7,13 @@ export const adminEvents = [
     {
         slug: 'zangi-book-launch-mulungushi-lusaka',
         title: "Zangi's Flag Book Launch",
-        date: '2026-05-22',
-        dateLabel: 'May 22, 2026',
-        timeLabel: '6:00 PM - 7:30 PM CAT',
-        venue: 'Mulungushi International Conference Centre, Lusaka',
+        date: '2026-05-03',
+        dateLabel: 'May 3, 2026',
+        timeLabel: '14:00 PM - 16:30 PM',
+        venue: 'NIPA Conference Hall, Lusaka',
         ticketTypes: [
-            { label: 'Standard', price: 350 },
-            { label: 'VIP', price: 500 },
+            { label: 'Standard', price: 250, priceStrategy: 'rounds', currentRoundKey: 'early_bird', currentRoundLabel: 'Early Bird' },
+            { label: 'VIP', price: 500, priceStrategy: 'fixed' },
         ],
     },
 ];

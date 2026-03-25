@@ -157,6 +157,12 @@ export async function fetchAdminOverview(accessToken) {
     return data;
 }
 
+export async function fetchAdminEvents(accessToken) {
+    const { data } = await adminApi.get('/events', authConfig(accessToken));
+
+    return data;
+}
+
 export async function fetchAdminTickets(accessToken, query = {}) {
     const { data } = await adminApi.get('/tickets', authQueryConfig(accessToken, query));
 

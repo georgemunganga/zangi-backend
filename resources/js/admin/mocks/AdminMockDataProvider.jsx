@@ -8,6 +8,7 @@ import {
     extractApiErrorMessage,
     fetchAdminContactMessages,
     fetchAdminCustomers,
+    fetchAdminEvents,
     fetchAdminOrders,
     fetchAdminOverview,
     fetchAdminPayments,
@@ -27,7 +28,7 @@ import {
     voidAdminTicket,
 } from '../api/adminApiClient';
 import { adminBooks, getDefaultManualSaleForm } from './adminOrderMockData';
-import { adminEvents, createValidationAttempt } from './adminMockData';
+import { adminEvents as mockAdminEvents, createValidationAttempt } from './adminMockData';
 
 const AdminMockDataContext = createContext(null);
 const DEFAULT_LIST_QUERY = {
@@ -171,6 +172,7 @@ function requireAdminToken(accessToken, message = 'Sign in to continue.') {
 
 export function AdminMockDataProvider({ children }) {
     const { accessToken, isAuthenticated } = useAdminAuth();
+    const [events, setEvents] = useState([]);
     const [tickets, setTickets] = useState([]);
     const [orders, setOrders] = useState([]);
     const [customers, setCustomers] = useState([]);
@@ -182,6 +184,7 @@ export function AdminMockDataProvider({ children }) {
     const [readDataError, setReadDataError] = useState('');
 
     const resetLiveAdminData = () => {
+        setEvents([]);
         setTickets([]);
         setOrders([]);
         setCustomers([]);
@@ -192,8 +195,9 @@ export function AdminMockDataProvider({ children }) {
     };
 
     const hydrateLiveAdminData = async (token) => {
-        const [overviewResponse, ticketResponse, orderResponse, customerResponse, contactResponse, paymentResponse] =
+        const [eventsResponse, overviewResponse, ticketResponse, orderResponse, customerResponse, contactResponse, paymentResponse] =
             await Promise.all([
+                fetchAdminEvents(token),
                 fetchAdminOverview(token),
                 fetchAdminTickets(token, DEFAULT_LIST_QUERY),
                 fetchAdminOrders(token, DEFAULT_LIST_QUERY),
@@ -203,6 +207,7 @@ export function AdminMockDataProvider({ children }) {
             ]);
 
         return {
+            events: (eventsResponse?.data ?? []).length > 0 ? eventsResponse.data : mockAdminEvents,
             overview: normalizeOverviewData(overviewResponse),
             tickets: (ticketResponse.data ?? []).map(normalizeTicketRecord),
             orders: (orderResponse.data ?? []).map(normalizeOrderRecord),
@@ -282,7 +287,7 @@ export function AdminMockDataProvider({ children }) {
         };
     }, [accessToken, isAuthenticated]);
 
-    const ticketEvents = useMemo(() => mergeTicketEvents(adminEvents, tickets), [tickets]);
+    const ticketEvents = useMemo(() => mergeTicketEvents(events, tickets), [events, tickets]);
 
     const validateTicket = async (ticketCode, eventSlug) => {
         requireAdminToken(accessToken, 'Sign in to validate tickets.');
@@ -510,11 +515,11 @@ export function AdminMockDataProvider({ children }) {
     return (
         <AdminMockDataContext.Provider
             value={{
-                events: adminEvents,
+                events,
                 ticketEvents,
                 books: adminBooks,
                 overview,
-                defaultManualSaleForm: getDefaultManualSaleForm(adminEvents, adminBooks),
+                defaultManualSaleForm: getDefaultManualSaleForm(events, adminBooks),
                 customers,
                 contactMessages,
                 orders,

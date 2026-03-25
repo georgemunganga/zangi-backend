@@ -13,6 +13,8 @@ class TicketPurchase extends Model
     protected $fillable = [
         'reference',
         'portal_user_id',
+        'seller_id',
+        'seller_code',
         'buyer_type',
         'email',
         'phone',
@@ -35,6 +37,8 @@ class TicketPurchase extends Model
         'status',
         'used_at',
         'source',
+        'synced',
+        'email_sent',
         'ticket_code',
         'qr_path',
         'pass_path',
@@ -47,11 +51,18 @@ class TicketPurchase extends Model
             'unit_price' => 'decimal:2',
             'total' => 'decimal:2',
             'used_at' => 'datetime',
+            'synced' => 'boolean',
+            'email_sent' => 'boolean',
         ];
     }
 
     public function portalUser(): BelongsTo
     {
         return $this->belongsTo(PortalUser::class);
+    }
+
+    public function seller(): BelongsTo
+    {
+        return $this->belongsTo(Seller::class);
     }
 }

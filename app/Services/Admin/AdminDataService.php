@@ -740,6 +740,69 @@ class AdminDataService
             ->all();
     }
 
+    public function eventsWithTicketTypes(): array
+    {
+        return collect(config('zangi_catalog.events', []))
+            ->map(function (array $event): array {
+                $salesConfig = $event['ticket_sales'] ?? [];
+                $ticketTypes = collect($event['ticket_types'] ?? [])
+                    ->map(function (array $ticketType) use ($event, $salesConfig): array {
+                        $priceStrategy = $ticketType['price_strategy'] ?? 'fixed';
+                        $price = null;
+
+                        if ($priceStrategy === 'rounds') {
+                            $rounds = $salesConfig['rounds'] ?? [];
+                            $currentRound = $this->getCurrentPricingRound($rounds, $salesConfig['timezone'] ?? 'Africa/Lusaka');
+                            $price = $currentRound ? (float) data_get($currentRound, 'standard_price_zmw', 0) : null;
+                        } else {
+                            $price = (float) ($ticketType['price_zmw'] ?? 0);
+                        }
+
+                        return [
+                            'id' => $ticketType['id'],
+                            'label' => $ticketType['label'],
+                            'price' => $price,
+                            'priceStrategy' => $priceStrategy,
+                            'currentRoundKey' => $priceStrategy === 'rounds' ? data_get($this->getCurrentPricingRound($salesConfig['rounds'] ?? [], $salesConfig['timezone'] ?? 'Africa/Lusaka'), 'key') : null,
+                            'currentRoundLabel' => $priceStrategy === 'rounds' ? data_get($this->getCurrentPricingRound($salesConfig['rounds'] ?? [], $salesConfig['timezone'] ?? 'Africa/Lusaka'), 'public_label') : null,
+                        ];
+                    })
+                    ->values()
+                    ->all();
+
+                return [
+                    'slug' => $event['slug'],
+                    'title' => $event['title'],
+                    'dateLabel' => $event['date_label'],
+                    'timeLabel' => $event['time_label'],
+                    'venue' => $event['location_label'],
+                    'ticketTypes' => $ticketTypes,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function getCurrentPricingRound(array $rounds, string $timezone): ?array
+    {
+        if (empty($rounds)) {
+            return null;
+        }
+
+        $current = now()->timezone($timezone);
+
+        foreach ($rounds as $round) {
+            $startsAt = \Carbon\CarbonImmutable::parse(data_get($round, 'starts_at'), $timezone);
+            $endsAt = \Carbon\CarbonImmutable::parse(data_get($round, 'ends_at'), $timezone);
+
+            if ($current->betweenIncluded($startsAt, $endsAt)) {
+                return $round;
+            }
+        }
+
+        return null;
+    }
+
     private function actionQueue(int $unpaidSales): array
     {
         $items = collect();

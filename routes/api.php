@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Admin\OverviewController as AdminOverviewControl
 use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Api\V1\Admin\ManualSalesController as AdminManualSalesController;
 use App\Http\Controllers\Api\V1\Admin\ContactMessageController as AdminContactMessageController;
+use App\Http\Controllers\Api\V1\Admin\SellerController as AdminSellerController;
 use App\Http\Controllers\Api\V1\Seller\AuthController as SellerAuthController;
 use App\Http\Controllers\Api\V1\Seller\SellerController;
 use App\Http\Controllers\Api\V1\BookCheckoutController;
@@ -106,6 +107,17 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/payments/{paymentIntent}/note', [AdminPaymentController::class, 'attachNote']);
             Route::get('/reports/summary', [AdminReportController::class, 'summary']);
             Route::get('/reports/export', [AdminReportController::class, 'export']);
+
+            // Seller Management
+            Route::prefix('sellers')->group(function (): void {
+                Route::get('/', [AdminSellerController::class, 'index']);
+                Route::get('/stats', [AdminSellerController::class, 'stats']);
+                Route::get('/{seller}', [AdminSellerController::class, 'show']);
+                Route::post('/', [AdminSellerController::class, 'store']);
+                Route::put('/{seller}', [AdminSellerController::class, 'update']);
+                Route::delete('/{seller}', [AdminSellerController::class, 'destroy']);
+                Route::post('/{seller}/reset-pin', [AdminSellerController::class, 'resetPin']);
+            });
         });
     });
 

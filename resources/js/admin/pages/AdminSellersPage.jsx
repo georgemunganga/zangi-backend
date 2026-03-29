@@ -1,11 +1,12 @@
 import { Key, Plus, Search, Shield, Trash2, UserCheck, UserX, Users } from 'lucide-react';
-import { useDeferredValue, useEffect, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { createAdminApiClient } from '../api/adminApiClient';
+import { useAdminAuth } from '../auth/AdminAuthProvider';
 import { AdminEmptyState } from '../components/AdminEmptyState';
 import { AdminPageHeader } from '../components/AdminPageHeader';
 import { AdminSectionCard } from '../components/AdminSectionCard';
 import { AdminStatCard } from '../components/AdminStatCard';
 import { AdminStatusBadge } from '../components/AdminStatusBadge';
-import { useAdminApiClient } from '../api/adminApiClient';
 
 function StatusFilterButton({ active, count, label, onClick, variant = 'default' }) {
     const baseClasses =
@@ -49,7 +50,8 @@ function ActionButton({ children, icon: Icon, onClick, variant = 'default' }) {
 }
 
 export function AdminSellersPage() {
-    const api = useAdminApiClient();
+    const { accessToken, isAuthenticated } = useAdminAuth();
+    const api = useMemo(() => createAdminApiClient(accessToken), [accessToken]);
     const [sellers, setSellers] = useState([]);
     const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, suspended: 0 });
     const [isLoading, setIsLoading] = useState(true);
@@ -62,11 +64,16 @@ export function AdminSellersPage() {
     const deferredSearch = useDeferredValue(searchTerm);
 
     const loadSellers = async () => {
+        if (!accessToken || !isAuthenticated) {
+            setIsLoading(false);
+            return;
+        }
+
         setIsLoading(true);
         try {
             const [sellersRes, statsRes] = await Promise.all([
-                api.get('/admin/sellers'),
-                api.get('/admin/sellers/stats'),
+                api.get('/sellers'),
+                api.get('/sellers/stats'),
             ]);
             setSellers(sellersRes.data.data || []);
             setStats(statsRes.data);
@@ -79,7 +86,7 @@ export function AdminSellersPage() {
 
     useEffect(() => {
         loadSellers();
-    }, []);
+    }, [accessToken, isAuthenticated]);
 
     const filteredSellers = sellers.filter((seller) => {
         const matchesSearch =
@@ -99,7 +106,7 @@ export function AdminSellersPage() {
         }
 
         try {
-            await api.delete(`/admin/sellers/${seller.id}`);
+            await api.delete(`/sellers/${seller.id}`);
             await loadSellers();
         } catch (error) {
             alert('Failed to delete seller: ' + (error.response?.data?.message || error.message));
@@ -108,7 +115,7 @@ export function AdminSellersPage() {
 
     const handleResetPin = async (sellerId, newPin) => {
         try {
-            await api.post(`/admin/sellers/${sellerId}/reset-pin`, { newPin });
+            await api.post(`/sellers/${sellerId}/reset-pin`, { newPin });
             setShowResetPinModal(false);
             setSelectedSeller(null);
             alert('PIN reset successfully');
@@ -328,7 +335,8 @@ export function AdminSellersPage() {
 }
 
 function CreateSellerModal({ onClose, onSuccess }) {
-    const api = useAdminApiClient();
+    const { accessToken } = useAdminAuth();
+    const api = useMemo(() => createAdminApiClient(accessToken), [accessToken]);
     const [formData, setFormData] = useState({
         name: '',
         code: '',
@@ -345,7 +353,7 @@ function CreateSellerModal({ onClose, onSuccess }) {
         setIsSubmitting(true);
 
         try {
-            await api.post('/admin/sellers', formData);
+            await api.post('/sellers', formData);
             onSuccess();
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to create seller');

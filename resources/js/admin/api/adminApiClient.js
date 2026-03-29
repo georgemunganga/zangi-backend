@@ -1,12 +1,23 @@
 import axios from 'axios';
 
-const adminApi = axios.create({
-    baseURL: '/api/v1/admin',
-    headers: {
-        Accept: 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-    },
-});
+const defaultAdminHeaders = {
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+};
+
+export function createAdminApiClient(accessToken = '') {
+    return axios.create({
+        baseURL: '/api/v1/admin',
+        headers: accessToken
+            ? {
+                  ...defaultAdminHeaders,
+                  Authorization: `Bearer ${accessToken}`,
+              }
+            : defaultAdminHeaders,
+    });
+}
+
+const adminApi = createAdminApiClient();
 
 function authConfig(accessToken) {
     return {

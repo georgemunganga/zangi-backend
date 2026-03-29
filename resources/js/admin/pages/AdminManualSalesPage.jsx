@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AdminEmptyState } from '../components/AdminEmptyState';
 import { AdminPageHeader } from '../components/AdminPageHeader';
 import { AdminSectionCard } from '../components/AdminSectionCard';
 import { AdminStatusBadge } from '../components/AdminStatusBadge';
@@ -171,6 +172,7 @@ export function AdminManualSalesPage() {
     const availableBookFormats = selectedBook?.formats ?? [];
     const selectedBookFormat = availableBookFormats.find((format) => format.label === form.bookFormat) ?? availableBookFormats[0];
     const standardUnitPrice = form.saleType === 'ticket' ? Number(selectedTicketType?.price ?? 0) : Number(selectedBookFormat?.price ?? 0);
+    const ticketRoundLabel = selectedTicketType?.currentRoundLabel ?? selectedTicketType?.currentRoundKey ?? '';
     const activeUnitPrice = form.priceMode === 'custom' ? Number(form.customUnitPrice || 0) : standardUnitPrice;
     const total = activeUnitPrice * Number(form.quantity || 0);
     const selectedExistingCustomer = customers.find((customer) => customer.id === form.existingCustomerId) ?? null;
@@ -186,6 +188,24 @@ export function AdminManualSalesPage() {
 
         return customers.filter((customer) => [customer.name, customer.email, customer.phone].join(' ').toLowerCase().includes(deferredCustomerQuery.toLowerCase())).slice(0, 6);
     }, [customers, deferredCustomerQuery]);
+
+    useEffect(() => {
+        if (form.saleType !== 'ticket' || !events.length) {
+            return;
+        }
+
+        const eventExists = events.some((event) => event.slug === form.eventSlug);
+
+        if (eventExists) {
+            return;
+        }
+
+        setForm((current) => ({
+            ...current,
+            eventSlug: events[0].slug,
+            ticketType: events[0].ticketTypes[0]?.label ?? '',
+        }));
+    }, [events, form.eventSlug, form.saleType]);
 
     useEffect(() => {
         if (form.saleType !== 'ticket' || !availableTicketTypes.length) {
@@ -483,33 +503,48 @@ export function AdminManualSalesPage() {
                                         <>
                                             <div className="space-y-3">
                                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--admin-muted)]">Select event</p>
-                                                <div className="grid gap-3 md:grid-cols-2">
-                                                    {events.map((event) => (
-                                                        <ChoiceCard
-                                                            description={`${event.dateLabel} | ${event.venue}`}
-                                                            icon={Ticket}
-                                                            key={event.slug}
-                                                            onClick={() => setForm((current) => ({ ...current, eventSlug: event.slug, ticketType: event.ticketTypes[0]?.label ?? current.ticketType }))}
-                                                            selected={form.eventSlug === event.slug}
-                                                            title={event.title}
-                                                        />
-                                                    ))}
-                                                </div>
+                                                {events.length > 0 ? (
+                                                    <div className="grid gap-3 md:grid-cols-2">
+                                                        {events.map((event) => (
+                                                            <ChoiceCard
+                                                                description={`${event.dateLabel} | ${event.venue}`}
+                                                                icon={Ticket}
+                                                                key={event.slug}
+                                                                onClick={() => setForm((current) => ({ ...current, eventSlug: event.slug, ticketType: event.ticketTypes[0]?.label ?? current.ticketType }))}
+                                                                selected={form.eventSlug === event.slug}
+                                                                title={event.title}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <AdminEmptyState
+                                                        description="No event catalog is available for manual ticket sales right now."
+                                                        title="No ticket events found"
+                                                    />
+                                                )}
                                             </div>
                                             <div className="space-y-3">
                                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--admin-muted)]">Ticket type</p>
-                                                <div className="grid gap-3 md:grid-cols-2">
-                                                    {availableTicketTypes.map((ticketType) => (
-                                                        <ChoiceCard
-                                                            description={`Standard price ${formatCurrency(ticketType.price)}`}
-                                                            icon={Ticket}
-                                                            key={ticketType.label}
-                                                            onClick={() => setForm((current) => ({ ...current, ticketType: ticketType.label }))}
-                                                            selected={form.ticketType === ticketType.label}
-                                                            title={ticketType.label}
-                                                        />
-                                                    ))}
-                                                </div>
+                                                {availableTicketTypes.length > 0 ? (
+                                                    <div className="grid gap-3 md:grid-cols-2">
+                                                        {availableTicketTypes.map((ticketType) => (
+                                                            <ChoiceCard
+                                                                description={`${ticketType.currentRoundLabel ? `${ticketType.currentRoundLabel} price` : 'Current price'} ${formatCurrency(ticketType.price)}`}
+                                                                icon={Ticket}
+                                                                key={ticketType.label}
+                                                                meta={ticketType.currentRoundLabel ? `Round: ${ticketType.currentRoundLabel}` : null}
+                                                                onClick={() => setForm((current) => ({ ...current, ticketType: ticketType.label }))}
+                                                                selected={form.ticketType === ticketType.label}
+                                                                title={ticketType.label}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <AdminEmptyState
+                                                        description="Select an event with ticket types to continue."
+                                                        title="No ticket types available"
+                                                    />
+                                                )}
                                             </div>
                                         </>
                                     ) : (
@@ -609,6 +644,9 @@ export function AdminManualSalesPage() {
                                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--admin-muted)]">Sale</p>
                                                 <p className="mt-3 text-sm font-semibold text-[color:var(--admin-ink)]">{reviewLabel}</p>
                                                 <p className="mt-1 text-sm text-[color:var(--admin-muted)]">Qty {form.quantity} | {formatCurrency(activeUnitPrice)} each</p>
+                                                {form.saleType === 'ticket' && ticketRoundLabel ? (
+                                                    <p className="text-sm text-[color:var(--admin-muted)]">Pricing round: {ticketRoundLabel}</p>
+                                                ) : null}
                                                 <p className="mt-3 text-lg font-semibold text-[color:var(--admin-ink)]">Total {formatCurrency(total)}</p>
                                                 <div className="mt-3 flex flex-wrap gap-2">
                                                     <AdminStatusBadge value={form.paymentMethod} />
@@ -663,6 +701,9 @@ export function AdminManualSalesPage() {
                             <div className="rounded-2xl bg-[color:var(--admin-surface)] px-4 py-4">
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--admin-muted)]">Pricing</p>
                                 <p className="mt-3 text-sm leading-6 text-[color:var(--admin-muted)]">Standard unit price: {formatCurrency(standardUnitPrice)}</p>
+                                {form.saleType === 'ticket' && ticketRoundLabel ? (
+                                    <p className="text-sm leading-6 text-[color:var(--admin-muted)]">Active round: {ticketRoundLabel}</p>
+                                ) : null}
                                 <p className="text-sm leading-6 text-[color:var(--admin-muted)]">Active unit price: {formatCurrency(activeUnitPrice)}</p>
                                 <p className="mt-2 text-lg font-semibold text-[color:var(--admin-ink)]">Total: {formatCurrency(total)}</p>
                                 <div className="mt-3 flex flex-wrap gap-2">

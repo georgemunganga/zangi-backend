@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AdminEmptyState } from '../components/AdminEmptyState';
 import { AdminPageHeader } from '../components/AdminPageHeader';
 import { AdminSectionCard } from '../components/AdminSectionCard';
 import { AdminStatusBadge } from '../components/AdminStatusBadge';
@@ -15,7 +16,7 @@ function FieldLabel({ children }) {
 }
 
 export function AdminTicketValidationPage() {
-    const { ticketEvents, validationAttempts, validateTicket, markUsed } = useAdminMockData();
+    const { isReadDataLoading, readDataError, ticketEvents, validationAttempts, validateTicket, markUsed } = useAdminMockData();
     const [selectedEventSlug, setSelectedEventSlug] = useState(ticketEvents[0]?.slug ?? '');
     const [ticketCode, setTicketCode] = useState('');
     const [result, setResult] = useState(null);
@@ -24,6 +25,7 @@ export function AdminTicketValidationPage() {
     const [isMarkingUsed, setIsMarkingUsed] = useState(false);
 
     const selectedEvent = ticketEvents.find((event) => event.slug === selectedEventSlug) ?? ticketEvents[0];
+    const hasTicketEvents = ticketEvents.length > 0;
 
     useEffect(() => {
         const selectedEventExists = ticketEvents.some((event) => event.slug === selectedEventSlug);
@@ -50,10 +52,15 @@ export function AdminTicketValidationPage() {
             return;
         }
 
+        if (!selectedEvent?.slug) {
+            setActionError('No ticket event is available for validation right now.');
+            return;
+        }
+
         setIsValidating(true);
 
         try {
-            const nextResult = await validateTicket(trimmedCode, selectedEventSlug);
+            const nextResult = await validateTicket(trimmedCode, selectedEvent.slug);
             setResult(nextResult);
         } catch (error) {
             setActionError(error.message);
@@ -95,6 +102,18 @@ export function AdminTicketValidationPage() {
         <div className="min-w-0 space-y-6">
             <AdminPageHeader title="Ticket Validation" description="Check a ticket code before entry." />
 
+            {readDataError ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {readDataError}
+                </div>
+            ) : null}
+
+            {isReadDataLoading ? (
+                <div className="rounded-2xl border border-[color:var(--admin-border)] bg-[color:var(--admin-surface)] px-4 py-3 text-sm text-[color:var(--admin-muted)]">
+                    Loading ticket validation data...
+                </div>
+            ) : null}
+
             {actionError ? (
                 <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                     {actionError}
@@ -108,14 +127,19 @@ export function AdminTicketValidationPage() {
                             <FieldLabel>Event context</FieldLabel>
                             <select
                                 className="w-full rounded-2xl border border-[color:var(--admin-border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[color:var(--admin-accent)]"
+                                disabled={!hasTicketEvents}
                                 onChange={(event) => setSelectedEventSlug(event.target.value)}
                                 value={selectedEventSlug}
                             >
-                                {ticketEvents.map((option) => (
-                                    <option key={option.slug} value={option.slug}>
-                                        {option.title}
-                                    </option>
-                                ))}
+                                {hasTicketEvents ? (
+                                    ticketEvents.map((option) => (
+                                        <option key={option.slug} value={option.slug}>
+                                            {option.title}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <option value="">No events available</option>
+                                )}
                             </select>
                         </label>
 
@@ -124,6 +148,7 @@ export function AdminTicketValidationPage() {
                             <input
                                 autoFocus
                                 className="w-full rounded-2xl border border-[color:var(--admin-border)] bg-white px-4 py-4 text-base outline-none transition focus:border-[color:var(--admin-accent)]"
+                                disabled={!hasTicketEvents}
                                 onChange={(event) => setTicketCode(event.target.value.toUpperCase())}
                                 placeholder="ZAN-TK-1001"
                                 type="text"
@@ -133,22 +158,31 @@ export function AdminTicketValidationPage() {
 
                         <button
                             className="inline-flex w-full items-center justify-center rounded-2xl bg-[color:var(--admin-ink)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-70"
-                            disabled={isValidating}
+                            disabled={isValidating || !hasTicketEvents}
                             type="submit"
                         >
                             {isValidating ? 'Validating...' : 'Validate ticket'}
                         </button>
                     </form>
 
-                    <div className="mt-6 rounded-[1.5rem] bg-stone-50 px-4 py-4">
-                        <p className="text-sm font-semibold text-[color:var(--admin-ink)]">{selectedEvent.title}</p>
-                        <p className="mt-2 text-sm leading-6 text-[color:var(--admin-muted)]">
-                            {selectedEvent.dateLabel} - {selectedEvent.venue}
-                        </p>
-                        <p className="mt-3 text-sm leading-6 text-[color:var(--admin-muted)]">
-                            Check the event before admitting a guest.
-                        </p>
-                    </div>
+                    {selectedEvent ? (
+                        <div className="mt-6 rounded-[1.5rem] bg-stone-50 px-4 py-4">
+                            <p className="text-sm font-semibold text-[color:var(--admin-ink)]">{selectedEvent.title}</p>
+                            <p className="mt-2 text-sm leading-6 text-[color:var(--admin-muted)]">
+                                {selectedEvent.dateLabel || 'Date unavailable'}{selectedEvent.venue ? ` - ${selectedEvent.venue}` : ''}
+                            </p>
+                            <p className="mt-3 text-sm leading-6 text-[color:var(--admin-muted)]">
+                                Check the event before admitting a guest.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="mt-6">
+                            <AdminEmptyState
+                                description="Add or load an active event before using ticket validation."
+                                title="No ticket events available"
+                            />
+                        </div>
+                    )}
                 </AdminSectionCard>
 
                 <AdminSectionCard eyebrow="Result" title="Validation outcome">

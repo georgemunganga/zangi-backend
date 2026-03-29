@@ -43,6 +43,19 @@ const EMPTY_OVERVIEW = {
     upcomingEvents: [],
     actionQueue: [],
 };
+const EMPTY_LIST_RESPONSE = { data: [] };
+
+function summarizeHydrationErrors(errors) {
+    if (errors.length === 0) {
+        return '';
+    }
+
+    if (errors.length === 1) {
+        return errors[0];
+    }
+
+    return `Some admin data could not be loaded. ${errors[0]}`;
+}
 
 function toDateKey(value) {
     if (!value) {
@@ -195,16 +208,34 @@ export function AdminMockDataProvider({ children }) {
     };
 
     const hydrateLiveAdminData = async (token) => {
-        const [eventsResponse, overviewResponse, ticketResponse, orderResponse, customerResponse, contactResponse, paymentResponse] =
-            await Promise.all([
-                fetchAdminEvents(token),
-                fetchAdminOverview(token),
-                fetchAdminTickets(token, DEFAULT_LIST_QUERY),
-                fetchAdminOrders(token, DEFAULT_LIST_QUERY),
-                fetchAdminCustomers(token, DEFAULT_LIST_QUERY),
-                fetchAdminContactMessages(token, DEFAULT_LIST_QUERY),
-                fetchAdminPayments(token, DEFAULT_LIST_QUERY),
-            ]);
+        const responses = await Promise.allSettled([
+            fetchAdminEvents(token),
+            fetchAdminOverview(token),
+            fetchAdminTickets(token, DEFAULT_LIST_QUERY),
+            fetchAdminOrders(token, DEFAULT_LIST_QUERY),
+            fetchAdminCustomers(token, DEFAULT_LIST_QUERY),
+            fetchAdminContactMessages(token, DEFAULT_LIST_QUERY),
+            fetchAdminPayments(token, DEFAULT_LIST_QUERY),
+        ]);
+        const errors = [];
+        const pickValue = (index, fallbackValue, fallbackMessage) => {
+            const response = responses[index];
+
+            if (response.status === 'fulfilled') {
+                return response.value;
+            }
+
+            errors.push(extractApiErrorMessage(response.reason, fallbackMessage));
+
+            return fallbackValue;
+        };
+        const eventsResponse = pickValue(0, EMPTY_LIST_RESPONSE, 'Unable to load events right now.');
+        const overviewResponse = pickValue(1, EMPTY_OVERVIEW, 'Unable to load the overview right now.');
+        const ticketResponse = pickValue(2, EMPTY_LIST_RESPONSE, 'Unable to load tickets right now.');
+        const orderResponse = pickValue(3, EMPTY_LIST_RESPONSE, 'Unable to load orders right now.');
+        const customerResponse = pickValue(4, EMPTY_LIST_RESPONSE, 'Unable to load customers right now.');
+        const contactResponse = pickValue(5, EMPTY_LIST_RESPONSE, 'Unable to load contact messages right now.');
+        const paymentResponse = pickValue(6, EMPTY_LIST_RESPONSE, 'Unable to load payments right now.');
 
         return {
             events: (eventsResponse?.data ?? []).length > 0 ? eventsResponse.data : mockAdminEvents,
@@ -214,10 +245,12 @@ export function AdminMockDataProvider({ children }) {
             customers: (customerResponse.data ?? []).map(normalizeCustomerRecord),
             contactMessages: (contactResponse.data ?? []).map(normalizeContactMessage),
             payments: (paymentResponse.data ?? []).map(normalizePaymentRecord),
+            readDataError: summarizeHydrationErrors(errors),
         };
     };
 
     const applyHydratedLiveAdminData = (snapshot) => {
+        setEvents(snapshot.events);
         setOverview(snapshot.overview);
         setTickets(snapshot.tickets);
         setOrders(snapshot.orders);
@@ -230,7 +263,7 @@ export function AdminMockDataProvider({ children }) {
         try {
             const snapshot = await hydrateLiveAdminData(token);
             applyHydratedLiveAdminData(snapshot);
-            setReadDataError('');
+            setReadDataError(snapshot.readDataError);
 
             return snapshot;
         } catch (error) {
@@ -268,6 +301,7 @@ export function AdminMockDataProvider({ children }) {
             .then((snapshot) => {
                 if (!cancelled) {
                     applyHydratedLiveAdminData(snapshot);
+                    setReadDataError(snapshot.readDataError);
                 }
             })
             .catch((error) => {

@@ -294,6 +294,33 @@ class AdminDocumentService
 
     private function pythonBinary(): string
     {
-        return is_executable('/usr/bin/python3') ? '/usr/bin/python3' : 'python3';
+        $candidates = DIRECTORY_SEPARATOR === '\\'
+            ? ['python', 'py']
+            : ['/usr/bin/python3', 'python3', 'python'];
+
+        foreach ($candidates as $candidate) {
+            if ($this->isExecutableCommand($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return DIRECTORY_SEPARATOR === '\\' ? 'python' : 'python3';
+    }
+
+    private function isExecutableCommand(string $command): bool
+    {
+        if (str_contains($command, '/') || str_contains($command, '\\')) {
+            return is_file($command) && is_executable($command);
+        }
+
+        $locator = DIRECTORY_SEPARATOR === '\\'
+            ? ['where', $command]
+            : ['which', $command];
+
+        $process = new Process($locator);
+        $process->setTimeout(5);
+        $process->run();
+
+        return $process->isSuccessful() && trim($process->getOutput()) !== '';
     }
 }

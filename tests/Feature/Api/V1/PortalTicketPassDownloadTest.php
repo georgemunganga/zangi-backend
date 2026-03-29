@@ -39,7 +39,7 @@ class PortalTicketPassDownloadTest extends TestCase
             'organization_name' => null,
             'event_slug' => 'zangi-book-launch-mulungushi-lusaka',
             'event_title' => "Zangi's Flag Book Launch",
-            'date_label' => 'May 24, 2026',
+            'date_label' => 'May 17, 2026',
             'time_label' => '14:00HRS',
             'location_label' => 'NIPA Conference Hall, Lusaka, Zambia',
             'ticket_type_id' => 'vip',

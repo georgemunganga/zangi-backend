@@ -33,7 +33,7 @@ class EventTicketPricingRoundTest extends TestCase
             'pricing_round_label' => 'Early Bird',
         ]);
 
-        $this->travelTo(Carbon::parse('2026-04-15 09:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-04-12 09:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'email' => 'standard.ticket@gmail.com',
         ]))
@@ -46,7 +46,7 @@ class EventTicketPricingRoundTest extends TestCase
             'pricing_round_label' => 'Standard',
         ]);
 
-        $this->travelTo(Carbon::parse('2026-05-05 09:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-04-30 09:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'email' => 'late.ticket@gmail.com',
         ]))
@@ -64,7 +64,7 @@ class EventTicketPricingRoundTest extends TestCase
     {
         Config::set('services.lenco.public_key', 'pub-test');
 
-        $this->travelTo(Carbon::parse('2026-04-14 11:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-04-11 11:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'email' => 'vip.early.ticket@gmail.com',
             'metadata' => [
@@ -82,7 +82,7 @@ class EventTicketPricingRoundTest extends TestCase
             'pricing_round_label' => 'Early Bird',
         ]);
 
-        $this->travelTo(Carbon::parse('2026-05-24 14:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-05-17 14:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'email' => 'vip.late.ticket@gmail.com',
             'metadata' => [
@@ -110,7 +110,7 @@ class EventTicketPricingRoundTest extends TestCase
             ->assertStatus(422)
             ->assertJsonPath('message', 'Ticket sales open on March 25, 2026.');
 
-        $this->travelTo(Carbon::parse('2026-05-25 09:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-05-18 09:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload())
             ->assertStatus(422)
             ->assertJsonPath('message', 'Ticket sales for this event have closed.');
@@ -120,7 +120,7 @@ class EventTicketPricingRoundTest extends TestCase
     {
         Config::set('services.lenco.public_key', 'pub-test');
 
-        $this->travelTo(Carbon::parse('2026-05-24 12:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-05-17 12:00:00', 'Africa/Lusaka'));
 
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'currency' => 'USD',

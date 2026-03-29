@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Admin\ManualSalesController as AdminManualSalesC
 use App\Http\Controllers\Api\V1\Admin\ContactMessageController as AdminContactMessageController;
 use App\Http\Controllers\Api\V1\Admin\SellerController as AdminSellerController;
 use App\Http\Controllers\Api\V1\Seller\AuthController as SellerAuthController;
+use App\Http\Controllers\Api\V1\Seller\CheckoutController as SellerCheckoutController;
 use App\Http\Controllers\Api\V1\Seller\SellerController;
 use App\Http\Controllers\Api\V1\BookCheckoutController;
 use App\Http\Controllers\Api\V1\ContactMessageController;
@@ -140,6 +141,14 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/sales', [SellerController::class, 'storeSale']);
             Route::patch('/sales/{id}/sync', [SellerController::class, 'markSynced']);
             Route::post('/sales/bulk-sync', [SellerController::class, 'bulkSync']);
+            Route::prefix('checkout')->group(function (): void {
+                Route::post('/mobile-money-intent', [SellerCheckoutController::class, 'createMobileMoneyIntent'])
+                    ->middleware('throttle:payment-intents');
+                Route::post('/verify', [SellerCheckoutController::class, 'verifyPayment'])
+                    ->middleware('throttle:payment-verify');
+                Route::post('/manual-deposit', [SellerCheckoutController::class, 'confirmManualDeposit'])
+                    ->middleware('throttle:public-checkout');
+            });
             Route::get('/ticket-types', [SellerController::class, 'ticketTypes']);
             Route::get('/current-round', [SellerController::class, 'currentRound']);
             Route::get('/events/active', [SellerController::class, 'activeEvent']);

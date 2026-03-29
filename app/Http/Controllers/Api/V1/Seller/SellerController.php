@@ -41,7 +41,7 @@ class SellerController extends Controller
     {
         /** @var \App\Models\Seller $seller */
         $seller = $request->user();
-        $filters = $request->query()->all();
+        $filters = $request->query();
 
         return response()->json(
             $this->sellerService->getSales($seller, $filters),
@@ -63,28 +63,9 @@ class SellerController extends Controller
 
     public function storeSale(Request $request): JsonResponse
     {
-        /** @var \App\Models\Seller $seller */
-        $seller = $request->user();
-
-        $validated = $request->validate([
-            'eventId' => 'nullable|string',
-            'ticketTypeId' => 'required|string',
-            'quantity' => 'required|integer|min:1|max:50',
-            'buyerPhone' => 'required|string',
-            'buyerEmail' => 'nullable|email',
-            'buyerName' => 'required|string',
-            'paymentMethod' => 'required|string|in:Cash,Mobile Money',
+        throw ValidationException::withMessages([
+            'sale' => 'Direct seller ticket creation is no longer allowed. Use the seller checkout payment endpoints.',
         ]);
-
-        try {
-            $sale = $this->sellerService->createSale($seller, $validated);
-        } catch (\InvalidArgumentException $e) {
-            throw ValidationException::withMessages([
-                'ticketTypeId' => $e->getMessage(),
-            ]);
-        }
-
-        return response()->json(['sale' => $sale], 201);
     }
 
     public function markSynced(Request $request, int $id): JsonResponse
@@ -103,25 +84,9 @@ class SellerController extends Controller
 
     public function bulkSync(Request $request): JsonResponse
     {
-        /** @var \App\Models\Seller $seller */
-        $seller = $request->user();
-
-        $validated = $request->validate([
-            'sales' => 'required|array',
-            'sales.*.id' => 'required|string',
-            'sales.*.ticketTypeId' => 'required|string',
-            'sales.*.quantity' => 'required|integer|min:1|max:50',
-            'sales.*.buyerPhone' => 'required|string',
-            'sales.*.buyerEmail' => 'nullable|email',
-            'sales.*.buyerName' => 'required|string',
-            'sales.*.paymentMethod' => 'required|string|in:Cash,Mobile Money',
-            'sales.*.total' => 'required|numeric',
-            'sales.*.timestamp' => 'required|date',
+        throw ValidationException::withMessages([
+            'sales' => 'Offline sale sync has been retired. Use the dedicated seller checkout payment endpoints.',
         ]);
-
-        $result = $this->sellerService->bulkSyncSales($seller, $validated['sales']);
-
-        return response()->json($result);
     }
 
     public function ticketTypes(Request $request): JsonResponse
@@ -135,7 +100,7 @@ class SellerController extends Controller
     public function currentRound(Request $request): JsonResponse
     {
         $eventId = $request->query('eventId');
-        $result = $this->sellerService->getCurrentRoundInfo();
+        $result = $this->sellerService->getCurrentRoundInfo($eventId);
 
         return response()->json($result);
     }

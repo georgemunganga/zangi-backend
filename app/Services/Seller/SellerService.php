@@ -2,14 +2,18 @@
 
 namespace App\Services\Seller;
 
+use App\Models\PaymentIntent;
 use App\Models\Seller;
 use App\Models\TicketPurchase;
 use App\Services\CatalogService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class SellerService
 {
+    private const EVENT_URL_PREFIX = 'https://www.zangisworld.com/events';
+
     public function __construct(
         private readonly CatalogService $catalogService,
     ) {
@@ -23,10 +27,13 @@ class SellerService
         $sales = $this->getSellerSales($seller);
 
         $todaySales = $sales->filter(function (array $sale) use ($dateStr): bool {
-            return str_starts_with($sale['created_at'], $dateStr);
+            return str_starts_with($sale['created_at'], $dateStr)
+                && $this->normalizePaymentStatus((string) $sale['payment_status']) === 'paid';
         });
 
-        $pendingSync = $sales->filter(fn (array $sale) => ! $sale['synced']);
+        $pendingSales = $sales->filter(
+            fn (array $sale): bool => $this->normalizePaymentStatus((string) $sale['payment_status']) !== 'paid'
+        );
 
         $eventConfig = $this->catalogService->findEvent('zangi-book-launch-mulungushi-lusaka');
         $currentRound = $this->getCurrentRound($eventConfig);
@@ -39,8 +46,8 @@ class SellerService
                 'currency' => 'ZMW',
             ],
             'pendingSync' => [
-                'count' => $pendingSync->count(),
-                'total' => $pendingSync->sum('total'),
+                'count' => $pendingSales->count(),
+                'total' => $pendingSales->sum('total'),
             ],
             'currentRound' => [
                 'key' => $currentRound['key'],
@@ -141,10 +148,9 @@ class SellerService
         $unitPrice = $ticketTypeConfig['price_strategy'] === 'rounds'
             ? $round['standard_price_zmw']
             : ($ticketTypeConfig['price_zmw'] ?? 0);
-
         $total = $unitPrice * $quantity;
 
-        $ticketPurchase = TicketPurchase::create([
+        $ticketPurchase = TicketPurchase::query()->create([
             'reference' => $this->generateReference(),
             'seller_id' => $seller->id,
             'seller_code' => $seller->code,
@@ -169,6 +175,8 @@ class SellerService
             'total' => $total,
             'status' => 'Ticket Ready',
             'source' => 'seller_terminal',
+            'synced' => true,
+            'email_sent' => false,
             'ticket_code' => null,
             'qr_path' => null,
             'pass_path' => null,
@@ -188,12 +196,14 @@ class SellerService
             'buyer_phone' => $ticketPurchase->phone,
             'buyer_email' => $ticketPurchase->email,
             'buyer_name' => $ticketPurchase->buyer_name,
-            'payment_method' => $data['paymentMethod'] ?? 'Cash',
+            'payment_method' => 'mobile-money',
+            'payment_status' => 'Paid',
             'total' => $ticketPurchase->total,
             'synced' => true,
             'email_sent' => false,
             'ticket_code' => $ticketPurchase->ticket_code,
             'created_at' => $ticketPurchase->created_at->toIso8601String(),
+            'event_slug' => $ticketPurchase->event_slug,
         ]);
     }
 
@@ -205,8 +215,6 @@ class SellerService
 
         foreach ($salesData as $saleData) {
             try {
-                $saleData['sellerId'] = $seller->id;
-                $saleData['sellerCode'] = $seller->code;
                 $result = $this->createSale($seller, $saleData);
                 $synced[] = $saleData['id'] ?? 'unknown';
                 $results[] = [
@@ -260,8 +268,8 @@ class SellerService
 
         $currentRound = $this->getCurrentRound($eventConfig);
         $ticketTypesConfig = $eventConfig['ticket_types'] ?? [];
-
         $ticketTypes = [];
+
         foreach ($ticketTypesConfig as $typeConfig) {
             $priceStrategy = $typeConfig['price_strategy'] ?? 'fixed';
             $price = $priceStrategy === 'rounds'
@@ -272,7 +280,7 @@ class SellerService
                 'id' => $typeConfig['id'],
                 'name' => $typeConfig['label'],
                 'label' => $priceStrategy === 'rounds'
-                    ? "{$currentRound['public_label']} – K{$price}"
+                    ? "{$currentRound['public_label']} - K{$price}"
                     : $typeConfig['label'],
                 'price' => $price,
                 'currency' => 'ZMW',
@@ -289,13 +297,14 @@ class SellerService
                 'publicLabel' => $currentRound['public_label'],
                 'startsAt' => $currentRound['starts_at'],
                 'endsAt' => $currentRound['ends_at'],
+                'priceZmw' => $currentRound['standard_price_zmw'],
             ],
         ];
     }
 
-    public function getCurrentRoundInfo(): array
+    public function getCurrentRoundInfo(?string $eventId = null): array
     {
-        $eventConfig = $this->catalogService->findEvent('zangi-book-launch-mulungushi-lusaka');
+        $eventConfig = $this->catalogService->findEvent($eventId ?: 'zangi-book-launch-mulungushi-lusaka');
         $round = $this->getCurrentRound($eventConfig);
 
         return [
@@ -320,14 +329,14 @@ class SellerService
             'id' => 'evt_001',
             'name' => $eventConfig['title'],
             'slug' => $eventConfig['slug'],
-            'description' => "A live family book launch at NIPA in Lusaka",
+            'description' => "A live family book launch for Zangi's Flag Book Launch in Lusaka.",
             'startDate' => $eventConfig['start_date'],
             'startTime' => '14:00:00',
             'endTime' => '16:30:00',
             'timezone' => $eventConfig['timezone'],
             'venue' => [
-                'name' => 'NIPA Conference Hall',
-                'address' => 'Lusaka, Zambia',
+                'name' => $eventConfig['location_label'],
+                'address' => $eventConfig['location_label'],
                 'coordinates' => ['lat' => -15.3875, 'lng' => 28.3228],
             ],
             'ticketSalesOpen' => true,
@@ -335,16 +344,34 @@ class SellerService
             'salesClosesAt' => $eventConfig['ticket_sales']['sales_end_at'],
             'image' => '/images/event-banner.png',
             'status' => $eventConfig['status'] ?? 'upcoming',
+            'publicEventUrl' => $this->eventUrl($eventConfig['slug']),
+            'depositPhone' => SellerCheckoutService::MANUAL_DEPOSIT_PHONE,
         ];
     }
 
     private function getSellerSales(Seller $seller): Collection
     {
-        return TicketPurchase::query()
-            ->where('seller_id', $seller->id)
-            ->orWhere('seller_code', $seller->code)
+        $tickets = TicketPurchase::query()
+            ->where(function ($query) use ($seller): void {
+                $query
+                    ->where('seller_id', $seller->id)
+                    ->orWhere('seller_code', $seller->code);
+            })
+            ->orderByDesc('created_at')
+            ->get();
+        $paymentIntents = PaymentIntent::query()
+            ->where('purchase_type', 'event-ticket')
+            ->whereIn('purchase_id', $tickets->pluck('id')->all())
+            ->orderByDesc('id')
             ->get()
-            ->map(fn (TicketPurchase $ticket) => [
+            ->unique('purchase_id')
+            ->keyBy('purchase_id');
+
+        return $tickets->map(function (TicketPurchase $ticket) use ($paymentIntents): array {
+            $paymentIntent = $paymentIntents->get($ticket->id);
+            $paymentStatus = $paymentIntent?->status ?: ($ticket->status === 'Ticket Ready' ? 'Paid' : 'Pending');
+
+            return [
                 'id' => $ticket->id,
                 'reference' => $ticket->reference,
                 'seller_id' => $ticket->seller_id,
@@ -357,13 +384,16 @@ class SellerService
                 'buyer_phone' => $ticket->phone,
                 'buyer_email' => $ticket->email,
                 'buyer_name' => $ticket->buyer_name,
-                'payment_method' => 'Cash',
+                'payment_method' => $paymentIntent?->payment_method ?: 'unknown',
+                'payment_status' => $paymentStatus,
                 'total' => (float) $ticket->total,
-                'synced' => (bool) ($ticket->synced ?? false),
+                'synced' => $this->normalizePaymentStatus($paymentStatus) === 'paid',
                 'email_sent' => (bool) ($ticket->email_sent ?? false),
                 'ticket_code' => $ticket->ticket_code,
                 'created_at' => $ticket->created_at->toIso8601String(),
-            ]);
+                'event_slug' => $ticket->event_slug,
+            ];
+        });
     }
 
     private function serializeSale(array $sale): array
@@ -374,18 +404,20 @@ class SellerService
             'ticketType' => [
                 'id' => $sale['ticket_type_id'],
                 'name' => $sale['ticket_type_label'],
-                'price' => $sale['total'] / max(1, $sale['quantity']),
+                'price' => round((float) $sale['total'] / max(1, $sale['quantity']), 2),
             ],
             'quantity' => $sale['quantity'],
             'buyerPhone' => $sale['buyer_phone'],
             'buyerEmail' => $sale['buyer_email'],
             'buyerName' => $sale['buyer_name'],
-            'paymentMethod' => $sale['payment_method'],
-            'total' => $sale['total'],
+            'paymentMethod' => $this->paymentMethodLabel((string) $sale['payment_method']),
+            'paymentStatus' => $sale['payment_status'] ?? 'Pending',
+            'total' => (float) $sale['total'],
             'timestamp' => $sale['created_at'],
-            'synced' => $sale['synced'],
-            'emailSent' => $sale['email_sent'],
+            'synced' => (bool) $sale['synced'],
+            'emailSent' => (bool) $sale['email_sent'],
             'ticketCode' => $sale['ticket_code'],
+            'shareUrl' => $this->eventUrl((string) ($sale['event_slug'] ?? 'zangi-book-launch-mulungushi-lusaka')),
         ];
     }
 
@@ -421,5 +453,28 @@ class SellerService
     private function generateReference(): string
     {
         return 'ZT-' . strtoupper(substr(uniqid(), -10));
+    }
+
+    private function paymentMethodLabel(string $method): string
+    {
+        if ($method === 'unknown') {
+            return 'Unknown';
+        }
+
+        return Str::headline(str_replace('-', ' ', $method));
+    }
+
+    private function normalizePaymentStatus(string $status): string
+    {
+        return match (Str::lower(trim($status))) {
+            'paid', 'successful', 'ticket ready' => 'paid',
+            'failed' => 'failed',
+            default => 'pending',
+        };
+    }
+
+    private function eventUrl(string $slug): string
+    {
+        return rtrim(self::EVENT_URL_PREFIX, '/').'/'.$slug;
     }
 }

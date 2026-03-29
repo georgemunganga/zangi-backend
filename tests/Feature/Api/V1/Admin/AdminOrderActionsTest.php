@@ -205,4 +205,59 @@ class AdminOrderActionsTest extends TestCase
                 && count($mail->attachments()) === 0;
         });
     }
+
+    public function test_admin_can_resend_ticket_delivery_when_public_template_copy_is_missing(): void
+    {
+        $token = AdminUser::factory()->create()->createToken('admin-access')->plainTextToken;
+        $disk = config('filesystems.default');
+        $trackedTemplate = resource_path('ticket-templates/Ticket.pdf');
+        $publicTemplate = public_path('Ticket.pdf');
+        $publicTemplateBackup = public_path('Ticket.pdf.admin-order-actions-backup');
+
+        Storage::fake($disk);
+        Mail::fake();
+
+        $this->assertFileExists($trackedTemplate);
+
+        if (is_file($publicTemplateBackup)) {
+            unlink($publicTemplateBackup);
+        }
+
+        $movedPublicTemplate = false;
+
+        if (is_file($publicTemplate)) {
+            $this->assertTrue(rename($publicTemplate, $publicTemplateBackup));
+            $movedPublicTemplate = true;
+        }
+
+        try {
+            $ticketSale = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
+                'customerMode' => 'walk_in',
+                'saleType' => 'ticket',
+                'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+                'ticketType' => 'VIP',
+                'buyerName' => 'Tracked Template Buyer',
+                'email' => 'tracked-template@example.com',
+                'phone' => '+260971888404',
+                'quantity' => 1,
+                'priceMode' => 'standard',
+                'paymentMethod' => 'Cash',
+                'issueStatus' => 'paid',
+                'customerType' => 'Individual',
+                'relationshipType' => 'Walk-in',
+            ])->assertCreated();
+
+            $this->withToken($token)->postJson("/api/v1/admin/orders/{$ticketSale->json('order.id')}/resend")
+                ->assertOk()
+                ->assertJsonPath('message', 'Ticket email sent.');
+
+            Mail::assertSent(TicketPassMail::class, function (TicketPassMail $mail): bool {
+                return $mail->hasTo('tracked-template@example.com');
+            });
+        } finally {
+            if ($movedPublicTemplate && is_file($publicTemplateBackup) && ! is_file($publicTemplate)) {
+                rename($publicTemplateBackup, $publicTemplate);
+            }
+        }
+    }
 }

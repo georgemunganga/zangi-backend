@@ -151,6 +151,7 @@ class AdminDocumentService
     private function ticketTemplatePath(): string
     {
         $candidates = [
+            resource_path('ticket-templates/Ticket.pdf'),
             storage_path('app/public/Ticket.pdf'),
             public_path('Ticket.pdf'),
         ];

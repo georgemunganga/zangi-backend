@@ -7,6 +7,7 @@ from io import BytesIO
 from pathlib import Path
 
 from pypdf import PdfReader, PdfWriter
+from pypdf.generic import DecodedStreamObject, NameObject
 from reportlab.graphics import renderPDF, renderSVG
 from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
@@ -17,11 +18,11 @@ from reportlab.pdfgen import canvas
 REFERENCE_WIDTH = 612.0
 REFERENCE_HEIGHT = 198.0
 
-TICKET_NO_BOX = (474.0, 132.0, 116.0, 34.0)
+TICKET_NO_BOX = (474.0, 119.0, 116.0, 24.0)
 NAME_BOX = (474.0, 107.0, 116.0, 20.0)
 DETAIL_BOX = (474.0, 58.0, 116.0, 46.0)
 DETAIL_TEXT_BOX = (478.0, 86.0, 108.0, 12.0)
-QR_BOX = (505.0, 61.0, 54.0, 28.0)
+QR_BOX = (496.0, 31.0, 68.0, 46.0)
 
 TEXT_COLOR = HexColor("#6B0F12")
 
@@ -143,6 +144,7 @@ def render_ticket_pdf(template_path: Path, payload: dict[str, str]) -> bytes:
 
     for index, page in enumerate(reader.pages):
         if index == 0:
+            ensure_trailing_whitespace_in_contents(page)
             overlay_page = build_overlay(float(page.mediabox.width), float(page.mediabox.height), payload)
             page.merge_page(overlay_page)
 
@@ -156,6 +158,21 @@ def render_ticket_pdf(template_path: Path, payload: dict[str, str]) -> bytes:
 def render_qr_svg(qr_value: str) -> str:
     drawing = build_qr_drawing(qr_value, 240.0)
     return renderSVG.drawToString(drawing)
+
+
+def ensure_trailing_whitespace_in_contents(page) -> None:
+    contents = page.get("/Contents")
+    if contents is None:
+        return
+
+    stream = contents.get_object()
+    data = stream.get_data()
+    if data.endswith((b"\n", b"\r", b"\t", b" ")):
+        return
+
+    normalized = DecodedStreamObject()
+    normalized.set_data(data + b"\n")
+    page[NameObject("/Contents")] = normalized
 
 
 def legacy_pdf_mode(template_path: Path, ticket_code: str) -> int:

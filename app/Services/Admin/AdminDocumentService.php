@@ -236,7 +236,7 @@ class AdminDocumentService
     private function generateTicketQrSvg(string $qrValue): string
     {
         $process = new Process([
-            'python',
+            $this->pythonBinary(),
             base_path('scripts/admin_stamp_ticket_pdf.py'),
             'qr-svg',
             $this->encodedPayload(['qrValue' => $qrValue]),
@@ -265,7 +265,7 @@ class AdminDocumentService
     private function renderStampedTicketPdf(string $templatePath, array $payload): string
     {
         $process = new Process([
-            'python',
+            $this->pythonBinary(),
             base_path('scripts/admin_stamp_ticket_pdf.py'),
             'pdf',
             $templatePath,
@@ -290,5 +290,10 @@ class AdminDocumentService
         }
 
         return $output;
+    }
+
+    private function pythonBinary(): string
+    {
+        return is_executable('/usr/bin/python3') ? '/usr/bin/python3' : 'python3';
     }
 }

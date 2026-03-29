@@ -20,7 +20,7 @@ class EventTicketPricingRoundTest extends TestCase
     {
         Config::set('services.lenco.public_key', 'pub-test');
 
-        $this->travelTo(Carbon::parse('2026-04-25 09:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-03-25 09:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'email' => 'early.ticket@gmail.com',
         ]))
@@ -33,7 +33,7 @@ class EventTicketPricingRoundTest extends TestCase
             'pricing_round_label' => 'Early Bird',
         ]);
 
-        $this->travelTo(Carbon::parse('2026-04-28 09:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-04-15 09:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'email' => 'standard.ticket@gmail.com',
         ]))
@@ -46,7 +46,7 @@ class EventTicketPricingRoundTest extends TestCase
             'pricing_round_label' => 'Standard',
         ]);
 
-        $this->travelTo(Carbon::parse('2026-05-01 09:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-05-05 09:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'email' => 'late.ticket@gmail.com',
         ]))
@@ -64,7 +64,7 @@ class EventTicketPricingRoundTest extends TestCase
     {
         Config::set('services.lenco.public_key', 'pub-test');
 
-        $this->travelTo(Carbon::parse('2026-04-27 11:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-04-14 11:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'email' => 'vip.early.ticket@gmail.com',
             'metadata' => [
@@ -82,7 +82,7 @@ class EventTicketPricingRoundTest extends TestCase
             'pricing_round_label' => 'Early Bird',
         ]);
 
-        $this->travelTo(Carbon::parse('2026-05-03 14:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-05-24 14:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'email' => 'vip.late.ticket@gmail.com',
             'metadata' => [
@@ -105,12 +105,12 @@ class EventTicketPricingRoundTest extends TestCase
     {
         Config::set('services.lenco.public_key', 'pub-test');
 
-        $this->travelTo(Carbon::parse('2026-04-24 09:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-03-24 09:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload())
             ->assertStatus(422)
-            ->assertJsonPath('message', 'Ticket sales open on April 25, 2026.');
+            ->assertJsonPath('message', 'Ticket sales open on March 25, 2026.');
 
-        $this->travelTo(Carbon::parse('2026-05-04 09:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-05-25 09:00:00', 'Africa/Lusaka'));
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload())
             ->assertStatus(422)
             ->assertJsonPath('message', 'Ticket sales for this event have closed.');
@@ -120,7 +120,7 @@ class EventTicketPricingRoundTest extends TestCase
     {
         Config::set('services.lenco.public_key', 'pub-test');
 
-        $this->travelTo(Carbon::parse('2026-05-01 12:00:00', 'Africa/Lusaka'));
+        $this->travelTo(Carbon::parse('2026-05-24 12:00:00', 'Africa/Lusaka'));
 
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'currency' => 'USD',
@@ -188,6 +188,30 @@ class EventTicketPricingRoundTest extends TestCase
                 && $mail->ticketPurchase->pricing_round_label === 'Late'
                 && count($mail->attachments()) === 1;
         });
+    }
+
+    public function test_legacy_event_slug_is_still_accepted_for_ticket_intents(): void
+    {
+        Config::set('services.lenco.public_key', 'pub-test');
+
+        $this->travelTo(Carbon::parse('2026-04-20 09:00:00', 'Africa/Lusaka'));
+
+        $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
+            'email' => 'legacy.slug.ticket@gmail.com',
+            'metadata' => [
+                'eventSlug' => 'zangi-book-launch-NIPA-lusaka',
+                'ticketTypeId' => 'standard',
+                'quantity' => 1,
+            ],
+        ]))
+            ->assertCreated()
+            ->assertJsonPath('amount', 300);
+
+        $this->assertDatabaseHas('ticket_purchases', [
+            'email' => 'legacy.slug.ticket@gmail.com',
+            'event_slug' => 'zangi-book-launch-mulungushi-lusaka',
+            'unit_price' => 300.00,
+        ]);
     }
 
     private function eventIntentPayload(array $overrides = []): array

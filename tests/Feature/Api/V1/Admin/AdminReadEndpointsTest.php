@@ -106,7 +106,7 @@ class AdminReadEndpointsTest extends TestCase
             'organization_name' => null,
             'event_slug' => 'zangi-book-launch-mulungushi-lusaka',
             'event_title' => "Zangi's Flag Book Launch",
-            'date_label' => 'May 22, 2026',
+            'date_label' => 'May 24, 2026',
             'time_label' => '6:00 PM - 7:30 PM CAT',
             'location_label' => 'Mulungushi International Conference Centre, Lusaka',
             'ticket_type_id' => 'vip',
@@ -119,7 +119,7 @@ class AdminReadEndpointsTest extends TestCase
             'total' => 500.00,
             'status' => 'Ticket Ready',
             'ticket_code' => 'PASS-ABC123',
-            'qr_path' => 'passes/tickets/ZT-TICKET-0001.png',
+            'qr_path' => 'passes/tickets/ZT-TICKET-0001.svg',
             'pass_path' => 'passes/tickets/ZT-TICKET-0001.pdf',
         ]);
 
@@ -164,7 +164,7 @@ class AdminReadEndpointsTest extends TestCase
             'organization_name' => null,
             'event_slug' => 'zangi-book-launch-mulungushi-lusaka',
             'event_title' => "Zangi's Flag Book Launch",
-            'date_label' => 'May 22, 2026',
+            'date_label' => 'May 24, 2026',
             'time_label' => '6:00 PM - 7:30 PM CAT',
             'location_label' => 'Mulungushi International Conference Centre, Lusaka',
             'ticket_type_id' => 'standard',

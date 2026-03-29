@@ -24,12 +24,16 @@ class CatalogService
 
     public function findEvent(string $slug): ?array
     {
-        return config("zangi_catalog.events.{$slug}");
+        $eventKey = $this->resolveEventKey($slug);
+
+        return $eventKey ? config("zangi_catalog.events.{$eventKey}") : null;
     }
 
     public function findEventTicketType(string $slug, string $ticketTypeId): ?array
     {
-        return config("zangi_catalog.events.{$slug}.ticket_types.{$ticketTypeId}");
+        $eventKey = $this->resolveEventKey($slug);
+
+        return $eventKey ? config("zangi_catalog.events.{$eventKey}.ticket_types.{$ticketTypeId}") : null;
     }
 
     public function requireBookFormat(string $slug, string $formatType): array
@@ -187,5 +191,24 @@ class CatalogService
         }
 
         return CarbonImmutable::parse($value, $timezone);
+    }
+
+    private function resolveEventKey(string $slug): ?string
+    {
+        $events = config('zangi_catalog.events', []);
+
+        if (array_key_exists($slug, $events)) {
+            return $slug;
+        }
+
+        foreach ($events as $eventKey => $event) {
+            $aliases = array_map('strval', $event['aliases'] ?? []);
+
+            if (in_array($slug, $aliases, true)) {
+                return (string) $eventKey;
+            }
+        }
+
+        return null;
     }
 }

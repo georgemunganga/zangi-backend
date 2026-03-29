@@ -78,7 +78,7 @@ class TicketFlowMatrixTest extends TestCase
         $adminTicketPurchaseId = (int) $adminManualResponse->json('tickets.0.id');
         $adminPaymentIntentId = (int) $adminManualResponse->json('payment.id');
 
-        Sanctum::actingAs($seller);
+        Sanctum::actingAs($seller, [], 'seller');
         $sellerIntentResponse = $this->postJson('/api/v1/seller/checkout/mobile-money-intent', [
             'eventId' => 'zangi-book-launch-mulungushi-lusaka',
             'ticketTypeId' => 'standard',
@@ -210,7 +210,7 @@ class TicketFlowMatrixTest extends TestCase
         $adminTicketPurchase = TicketPurchase::query()->findOrFail((int) $adminManualResponse->json('tickets.0.id'));
         $adminPaymentIntent = PaymentIntent::query()->findOrFail((int) $adminManualResponse->json('payment.id'));
 
-        Sanctum::actingAs($seller);
+        Sanctum::actingAs($seller, [], 'seller');
         $sellerIntentResponse = $this->postJson('/api/v1/seller/checkout/mobile-money-intent', [
             'eventId' => 'zangi-book-launch-mulungushi-lusaka',
             'ticketTypeId' => 'standard',

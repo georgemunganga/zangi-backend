@@ -19,7 +19,7 @@ class CheckoutController extends Controller
     public function createMobileMoneyIntent(Request $request): JsonResponse
     {
         /** @var \App\Models\Seller $seller */
-        $seller = $request->user();
+        $seller = $request->user('seller');
 
         $validated = $request->validate([
             'eventId' => ['nullable', 'string', 'max:255'],
@@ -46,7 +46,7 @@ class CheckoutController extends Controller
     public function verifyPayment(Request $request): JsonResponse
     {
         /** @var \App\Models\Seller $seller */
-        $seller = $request->user();
+        $seller = $request->user('seller');
 
         $validated = $request->validate([
             'reference' => ['required', 'string', 'max:120'],
@@ -69,7 +69,7 @@ class CheckoutController extends Controller
     public function confirmManualDeposit(Request $request): JsonResponse
     {
         /** @var \App\Models\Seller $seller */
-        $seller = $request->user();
+        $seller = $request->user('seller');
 
         $validated = $request->validate([
             'eventId' => ['nullable', 'string', 'max:255'],

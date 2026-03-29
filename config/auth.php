@@ -53,6 +53,11 @@ return [
             'driver' => 'sanctum',
             'provider' => 'admin_users',
         ],
+
+        'seller' => [
+            'driver' => 'sanctum',
+            'provider' => 'sellers',
+        ],
     ],
 
     /*
@@ -81,6 +86,11 @@ return [
         'admin_users' => [
             'driver' => 'eloquent',
             'model' => AdminUser::class,
+        ],
+
+        'sellers' => [
+            'driver' => 'eloquent',
+            'model' => \App\Models\Seller::class,
         ],
 
         // 'portal_users' => [

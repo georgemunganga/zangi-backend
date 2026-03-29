@@ -18,7 +18,7 @@ class SellerController extends Controller
     public function dashboard(Request $request): JsonResponse
     {
         /** @var \App\Models\Seller $seller */
-        $seller = $request->user();
+        $seller = $request->user('seller');
         $date = $request->query('date');
 
         return response()->json(
@@ -29,7 +29,7 @@ class SellerController extends Controller
     public function recentSales(Request $request): JsonResponse
     {
         /** @var \App\Models\Seller $seller */
-        $seller = $request->user();
+        $seller = $request->user('seller');
         $limit = (int) $request->query('limit', 5);
 
         return response()->json(
@@ -40,7 +40,7 @@ class SellerController extends Controller
     public function sales(Request $request): JsonResponse
     {
         /** @var \App\Models\Seller $seller */
-        $seller = $request->user();
+        $seller = $request->user('seller');
         $filters = $request->query();
 
         return response()->json(
@@ -51,7 +51,7 @@ class SellerController extends Controller
     public function showSale(Request $request, int $id): JsonResponse
     {
         /** @var \App\Models\Seller $seller */
-        $seller = $request->user();
+        $seller = $request->user('seller');
         $sale = $this->sellerService->getSale($seller, $id);
 
         if (! $sale) {
@@ -71,7 +71,7 @@ class SellerController extends Controller
     public function markSynced(Request $request, int $id): JsonResponse
     {
         /** @var \App\Models\Seller $seller */
-        $seller = $request->user();
+        $seller = $request->user('seller');
 
         $success = $this->sellerService->markSaleSynced($seller, $id);
 
@@ -126,7 +126,7 @@ class SellerController extends Controller
     public function resendEmail(Request $request, int $saleId): JsonResponse
     {
         /** @var \App\Models\Seller $seller */
-        $seller = $request->user();
+        $seller = $request->user('seller');
 
         $sale = $this->sellerService->getSale($seller, $saleId);
         if (! $sale) {

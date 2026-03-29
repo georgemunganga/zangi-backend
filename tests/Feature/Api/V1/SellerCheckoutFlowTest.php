@@ -22,7 +22,7 @@ class SellerCheckoutFlowTest extends TestCase
     {
         Config::set('services.lenco.public_key', 'pub-test');
         $seller = $this->createSeller();
-        Sanctum::actingAs($seller);
+        Sanctum::actingAs($seller, [], 'seller');
 
         $this->travelTo(Carbon::parse('2026-04-20 10:00:00', 'Africa/Lusaka'));
 
@@ -62,7 +62,7 @@ class SellerCheckoutFlowTest extends TestCase
         Mail::fake();
 
         $seller = $this->createSeller();
-        Sanctum::actingAs($seller);
+        Sanctum::actingAs($seller, [], 'seller');
 
         $this->travelTo(Carbon::parse('2026-05-10 12:00:00', 'Africa/Lusaka'));
 
@@ -108,7 +108,7 @@ class SellerCheckoutFlowTest extends TestCase
     public function test_seller_can_confirm_manual_deposit_and_sales_read_reflects_it(): void
     {
         $seller = $this->createSeller();
-        Sanctum::actingAs($seller);
+        Sanctum::actingAs($seller, [], 'seller');
 
         $this->travelTo(Carbon::parse('2026-03-29 09:00:00', 'Africa/Lusaka'));
 
@@ -136,6 +136,123 @@ class SellerCheckoutFlowTest extends TestCase
         $this->assertSame('Ticket Ready', $ticketPurchase->status);
         $this->assertSame('manual-deposit', $paymentIntent->payment_method);
         $this->assertSame('Paid', $paymentIntent->status);
+    }
+
+    public function test_seller_login_token_authenticates_protected_get_endpoints(): void
+    {
+        $this->createSeller();
+
+        $loginResponse = $this->postJson('/api/v1/seller/auth/login', [
+            'phone' => '0971000001',
+            'pin' => '1234',
+        ]);
+
+        $loginResponse
+            ->assertOk()
+            ->assertJsonPath('seller.phone', '0971000001');
+
+        $token = (string) $loginResponse->json('accessToken');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/seller/events/active')
+            ->assertOk()
+            ->assertJsonPath('event.slug', 'zangi-book-launch-mulungushi-lusaka');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/seller/ticket-types')
+            ->assertOk()
+            ->assertJsonStructure([
+                'ticketTypes',
+                'currentRound',
+            ]);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/seller/auth/me')
+            ->assertOk()
+            ->assertJsonPath('seller.phone', '0971000001');
+    }
+
+    public function test_real_seller_login_token_supports_the_active_seller_app_api_surface(): void
+    {
+        Mail::fake();
+        $this->travelTo(Carbon::parse('2026-04-20 09:00:00', 'Africa/Lusaka'));
+        $this->createSeller();
+
+        $token = (string) $this->postJson('/api/v1/seller/auth/login', [
+            'phone' => '0971000001',
+            'pin' => '1234',
+        ])->assertOk()->json('accessToken');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/seller/dashboard')
+            ->assertOk()
+            ->assertJsonPath('today.salesCount', 0)
+            ->assertJsonPath('event.name', "Zangi's Flag Book Launch");
+
+        $this->withToken($token)
+            ->getJson('/api/v1/seller/current-round')
+            ->assertOk()
+            ->assertJsonStructure([
+                'key',
+                'label',
+                'publicLabel',
+                'startsAt',
+                'endsAt',
+                'priceZmw',
+            ]);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/seller/events/zangi-book-launch-mulungushi-lusaka')
+            ->assertOk()
+            ->assertJsonPath('event.publicEventUrl', 'https://www.zangisworld.com/events/zangi-book-launch-mulungushi-lusaka');
+
+        $saleResponse = $this->withToken($token)
+            ->postJson('/api/v1/seller/checkout/manual-deposit', [
+                'eventId' => 'zangi-book-launch-mulungushi-lusaka',
+                'ticketTypeId' => 'standard',
+                'quantity' => 1,
+                'buyerPhone' => '0972827372',
+                'buyerName' => 'Surface Check Buyer',
+                'depositReference' => 'DEP-SURFACE-001',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('sale.paymentMethod', 'Manual Deposit');
+
+        $saleId = (int) $saleResponse->json('sale.id');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/seller/sales')
+            ->assertOk()
+            ->assertJsonPath('pagination.total', 1)
+            ->assertJsonPath('sales.0.id', $saleId);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/seller/sales/recent')
+            ->assertOk()
+            ->assertJsonPath('sales.0.id', $saleId);
+
+        $this->withToken($token)
+            ->getJson("/api/v1/seller/sales/{$saleId}")
+            ->assertOk()
+            ->assertJsonPath('sale.id', $saleId)
+            ->assertJsonPath('sale.paymentStatus', 'Paid');
+
+        $this->withToken($token)
+            ->postJson("/api/v1/seller/sales/{$saleId}/email/resend")
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->withToken($token)
+            ->postJson('/api/v1/seller/auth/logout')
+            ->assertOk();
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+
+        app('auth')->forgetGuards();
+
+        $this->withToken($token)
+            ->getJson('/api/v1/seller/events/active')
+            ->assertUnauthorized();
     }
 
     private function createSeller(): Seller

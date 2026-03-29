@@ -52,7 +52,7 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         /** @var Seller $seller */
-        $seller = $request->user();
+        $seller = $request->user('seller');
         $seller->tokens()->delete();
 
         return response()->json([
@@ -63,7 +63,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         /** @var Seller $seller */
-        $seller = $request->user();
+        $seller = $request->user('seller');
 
         return response()->json([
             'seller' => $this->serializeSeller($seller),

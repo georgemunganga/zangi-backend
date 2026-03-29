@@ -127,13 +127,13 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/login', [SellerAuthController::class, 'login'])
                 ->middleware('throttle:portal-otp-request');
 
-            Route::middleware('auth:sanctum')->group(function (): void {
+            Route::middleware('auth:seller')->group(function (): void {
                 Route::post('/logout', [SellerAuthController::class, 'logout']);
                 Route::get('/me', [SellerAuthController::class, 'me']);
             });
         });
 
-        Route::middleware('auth:sanctum')->group(function (): void {
+        Route::middleware('auth:seller')->group(function (): void {
             Route::get('/dashboard', [SellerController::class, 'dashboard']);
             Route::get('/sales/recent', [SellerController::class, 'recentSales']);
             Route::get('/sales', [SellerController::class, 'sales']);

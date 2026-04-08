@@ -68,7 +68,7 @@ class EventTicketPricingRoundTest extends TestCase
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'email' => 'vip.early.ticket@gmail.com',
             'metadata' => [
-                'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+                'eventSlug' => 'zangi-book-launch-lusaka',
                 'ticketTypeId' => 'vip',
                 'quantity' => 1,
             ],
@@ -86,7 +86,7 @@ class EventTicketPricingRoundTest extends TestCase
         $this->postJson('/api/v1/payments/lenco/intent', $this->eventIntentPayload([
             'email' => 'vip.late.ticket@gmail.com',
             'metadata' => [
-                'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+                'eventSlug' => 'zangi-book-launch-lusaka',
                 'ticketTypeId' => 'vip',
                 'quantity' => 1,
             ],
@@ -131,7 +131,7 @@ class EventTicketPricingRoundTest extends TestCase
             ->assertJsonPath('message', 'Event tickets are only available in Zambian Kwacha.');
 
         $this->postJson('/api/v1/checkout/event-tickets/online-intent', [
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketTypeId' => 'standard',
             'quantity' => 1,
             'buyerType' => 'individual',
@@ -139,7 +139,7 @@ class EventTicketPricingRoundTest extends TestCase
             'phone' => '+260971000002',
             'currency' => 'USD',
             'paymentMethod' => 'card',
-            'returnPath' => '/events/zangi-book-launch-mulungushi-lusaka/checkout?ticket=standard',
+            'returnPath' => '/events/zangi-book-launch-lusaka/checkout?ticket=standard',
         ])
             ->assertStatus(422)
             ->assertJsonPath('message', 'Event tickets are only available in Zambian Kwacha.');
@@ -209,7 +209,7 @@ class EventTicketPricingRoundTest extends TestCase
 
         $this->assertDatabaseHas('ticket_purchases', [
             'email' => 'legacy.slug.ticket@gmail.com',
-            'event_slug' => 'zangi-book-launch-mulungushi-lusaka',
+            'event_slug' => 'zangi-book-launch-lusaka',
             'unit_price' => 300.00,
         ]);
     }
@@ -223,10 +223,10 @@ class EventTicketPricingRoundTest extends TestCase
             'phone' => '+260971000001',
             'channel' => 'mobile-money',
             'currency' => 'ZMW',
-            'returnPath' => '/events/zangi-book-launch-mulungushi-lusaka/checkout?ticket=standard',
+            'returnPath' => '/events/zangi-book-launch-lusaka/checkout?ticket=standard',
             'customerName' => 'Buyer',
             'metadata' => [
-                'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+                'eventSlug' => 'zangi-book-launch-lusaka',
                 'ticketTypeId' => 'standard',
                 'quantity' => 1,
             ],

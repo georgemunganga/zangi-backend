@@ -51,8 +51,8 @@ return [
     ],
 
     'events' => [
-        'zangi-book-launch-mulungushi-lusaka' => [
-            'slug' => 'zangi-book-launch-mulungushi-lusaka',
+        'zangi-book-launch-lusaka' => [
+            'slug' => 'zangi-book-launch-lusaka',
             'aliases' => ['zangi-book-launch-NIPA-lusaka'],
             'title' => "Zangi's Flag Book Launch",
             'status' => 'upcoming',

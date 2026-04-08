@@ -98,7 +98,7 @@ GET /api/v1/admin/events
 {
   "data": [
     {
-      "slug": "zangi-book-launch-mulungushi-lusaka",
+      "slug": "zangi-book-launch-lusaka",
       "title": "Zangi's Flag Book Launch",
       "dateLabel": "May 3, 2026",
       "timeLabel": "14:00 PM - 16:30 PM",

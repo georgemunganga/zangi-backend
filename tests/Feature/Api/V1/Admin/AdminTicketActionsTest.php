@@ -35,7 +35,7 @@ class AdminTicketActionsTest extends TestCase
         $created = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'VIP',
             'buyerName' => 'Gate Check Buyer',
             'email' => 'gate@example.com',
@@ -70,7 +70,7 @@ class AdminTicketActionsTest extends TestCase
         $created = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'VIP',
             'buyerName' => 'Pending Buyer',
             'email' => 'pending@example.com',
@@ -97,7 +97,7 @@ class AdminTicketActionsTest extends TestCase
         $paid = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'VIP',
             'buyerName' => 'Validated Buyer',
             'email' => 'validated@example.com',
@@ -113,7 +113,7 @@ class AdminTicketActionsTest extends TestCase
         $reserved = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'Standard',
             'buyerName' => 'Reserved Buyer',
             'email' => 'reserved@example.com',
@@ -131,7 +131,7 @@ class AdminTicketActionsTest extends TestCase
 
         $this->withToken($token)->postJson('/api/v1/admin/tickets/validate', [
             'ticketCode' => $paidTicketCode,
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
         ])
             ->assertOk()
             ->assertJsonPath('code', $paidTicketCode)
@@ -140,7 +140,7 @@ class AdminTicketActionsTest extends TestCase
 
         $this->withToken($token)->postJson('/api/v1/admin/tickets/validate', [
             'ticketCode' => $reservedTicketCode,
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
         ])
             ->assertOk()
             ->assertJsonPath('code', $reservedTicketCode)
@@ -157,7 +157,7 @@ class AdminTicketActionsTest extends TestCase
         $created = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'VIP',
             'buyerName' => 'Workflow Buyer',
             'email' => 'workflow@example.com',

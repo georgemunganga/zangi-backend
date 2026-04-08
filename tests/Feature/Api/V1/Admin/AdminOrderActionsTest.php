@@ -76,7 +76,7 @@ class AdminOrderActionsTest extends TestCase
         $pending = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'VIP',
             'buyerName' => 'Cancel Buyer',
             'email' => 'cancel@example.com',
@@ -96,7 +96,7 @@ class AdminOrderActionsTest extends TestCase
         $paid = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'VIP',
             'buyerName' => 'Refund Buyer',
             'email' => 'refund-order@example.com',
@@ -159,7 +159,7 @@ class AdminOrderActionsTest extends TestCase
         $ticketSale = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'VIP',
             'buyerName' => 'Ticket Buyer',
             'email' => 'ticket-buyer@example.com',
@@ -234,7 +234,7 @@ class AdminOrderActionsTest extends TestCase
             $ticketSale = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
                 'customerMode' => 'walk_in',
                 'saleType' => 'ticket',
-                'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+                'eventSlug' => 'zangi-book-launch-lusaka',
                 'ticketType' => 'VIP',
                 'buyerName' => 'Tracked Template Buyer',
                 'email' => 'tracked-template@example.com',

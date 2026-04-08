@@ -32,7 +32,7 @@ class AdminPaymentActionsTest extends TestCase
         $pending = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'VIP',
             'buyerName' => 'Payment Reconcile Buyer',
             'email' => 'reconcile@example.com',

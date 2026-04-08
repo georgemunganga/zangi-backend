@@ -5,7 +5,7 @@ const DEFAULT_USED_AT = '2026-03-19T18:20:00';
 
 export const adminEvents = [
     {
-        slug: 'zangi-book-launch-mulungushi-lusaka',
+        slug: 'zangi-book-launch-lusaka',
         title: "Zangi's Flag Book Launch",
         date: '2026-05-03',
         dateLabel: 'May 3, 2026',

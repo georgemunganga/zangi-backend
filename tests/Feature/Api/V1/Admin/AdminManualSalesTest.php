@@ -32,7 +32,7 @@ class AdminManualSalesTest extends TestCase
         $response = $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'VIP',
             'buyerName' => 'Counter VIP Buyer',
             'email' => '',
@@ -120,7 +120,7 @@ class AdminManualSalesTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'VIP',
             'buyerName' => 'Counter VIP Buyer',
             'email' => '',

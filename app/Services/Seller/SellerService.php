@@ -35,7 +35,7 @@ class SellerService
             fn (array $sale): bool => $this->normalizePaymentStatus((string) $sale['payment_status']) !== 'paid'
         );
 
-        $eventConfig = $this->catalogService->findEvent('zangi-book-launch-mulungushi-lusaka');
+        $eventConfig = $this->catalogService->findEvent('zangi-book-launch-lusaka');
         $currentRound = $this->getCurrentRound($eventConfig);
 
         return [
@@ -133,7 +133,7 @@ class SellerService
 
     public function createSale(Seller $seller, array $data): array
     {
-        $eventSlug = $data['eventId'] ?? 'zangi-book-launch-mulungushi-lusaka';
+        $eventSlug = $data['eventId'] ?? 'zangi-book-launch-lusaka';
         $ticketTypeId = $data['ticketTypeId'];
         $quantity = (int) ($data['quantity'] ?? 1);
 
@@ -259,7 +259,7 @@ class SellerService
 
     public function getTicketTypes(?string $eventId = null): array
     {
-        $eventSlug = $eventId ?? 'zangi-book-launch-mulungushi-lusaka';
+        $eventSlug = $eventId ?? 'zangi-book-launch-lusaka';
         $eventConfig = $this->catalogService->findEvent($eventSlug);
 
         if (! $eventConfig) {
@@ -304,7 +304,7 @@ class SellerService
 
     public function getCurrentRoundInfo(?string $eventId = null): array
     {
-        $eventConfig = $this->catalogService->findEvent($eventId ?: 'zangi-book-launch-mulungushi-lusaka');
+        $eventConfig = $this->catalogService->findEvent($eventId ?: 'zangi-book-launch-lusaka');
         $round = $this->getCurrentRound($eventConfig);
 
         return [
@@ -417,7 +417,7 @@ class SellerService
             'synced' => (bool) $sale['synced'],
             'emailSent' => (bool) $sale['email_sent'],
             'ticketCode' => $sale['ticket_code'],
-            'shareUrl' => $this->eventUrl((string) ($sale['event_slug'] ?? 'zangi-book-launch-mulungushi-lusaka')),
+            'shareUrl' => $this->eventUrl((string) ($sale['event_slug'] ?? 'zangi-book-launch-lusaka')),
         ];
     }
 

@@ -61,7 +61,7 @@ class TicketFlowMatrixTest extends TestCase
         $adminManualResponse = $this->withToken($adminToken)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'Standard',
             'buyerName' => 'Admin Counter Buyer',
             'email' => '',
@@ -80,7 +80,7 @@ class TicketFlowMatrixTest extends TestCase
 
         Sanctum::actingAs($seller, [], 'seller');
         $sellerIntentResponse = $this->postJson('/api/v1/seller/checkout/mobile-money-intent', [
-            'eventId' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventId' => 'zangi-book-launch-lusaka',
             'ticketTypeId' => 'standard',
             'quantity' => 1,
             'buyerPhone' => '0972827372',
@@ -193,7 +193,7 @@ class TicketFlowMatrixTest extends TestCase
         $adminManualResponse = $this->withToken($adminToken)->postJson('/api/v1/admin/manual-sales', [
             'customerMode' => 'walk_in',
             'saleType' => 'ticket',
-            'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventSlug' => 'zangi-book-launch-lusaka',
             'ticketType' => 'Standard',
             'buyerName' => 'Reserved Counter Buyer',
             'email' => '',
@@ -212,7 +212,7 @@ class TicketFlowMatrixTest extends TestCase
 
         Sanctum::actingAs($seller, [], 'seller');
         $sellerIntentResponse = $this->postJson('/api/v1/seller/checkout/mobile-money-intent', [
-            'eventId' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventId' => 'zangi-book-launch-lusaka',
             'ticketTypeId' => 'standard',
             'quantity' => 1,
             'buyerPhone' => '0972827372',
@@ -272,10 +272,10 @@ class TicketFlowMatrixTest extends TestCase
             'phone' => '+260971000001',
             'channel' => 'mobile-money',
             'currency' => 'ZMW',
-            'returnPath' => '/events/zangi-book-launch-mulungushi-lusaka/checkout?ticket=standard',
+            'returnPath' => '/events/zangi-book-launch-lusaka/checkout?ticket=standard',
             'customerName' => 'Buyer',
             'metadata' => [
-                'eventSlug' => 'zangi-book-launch-mulungushi-lusaka',
+                'eventSlug' => 'zangi-book-launch-lusaka',
                 'ticketTypeId' => 'standard',
                 'quantity' => 1,
             ],

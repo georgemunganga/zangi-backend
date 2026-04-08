@@ -37,7 +37,7 @@ class PortalTicketPassDownloadTest extends TestCase
             'email' => $portalUser->email,
             'phone' => $portalUser->phone,
             'organization_name' => null,
-            'event_slug' => 'zangi-book-launch-mulungushi-lusaka',
+            'event_slug' => 'zangi-book-launch-lusaka',
             'event_title' => "Zangi's Flag Book Launch",
             'date_label' => 'May 17, 2026',
             'time_label' => '14:00HRS',

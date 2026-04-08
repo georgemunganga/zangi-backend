@@ -32,7 +32,7 @@ class SellerCheckoutService
     {
         return DB::transaction(function () use ($seller, $payload): array {
             [$event, $ticketType] = $this->resolveTicketOffer(
-                (string) ($payload['eventId'] ?? 'zangi-book-launch-mulungushi-lusaka'),
+                (string) ($payload['eventId'] ?? 'zangi-book-launch-lusaka'),
                 (string) $payload['ticketTypeId'],
             );
 
@@ -99,7 +99,7 @@ class SellerCheckoutService
     {
         return DB::transaction(function () use ($seller, $payload): array {
             [$event, $ticketType] = $this->resolveTicketOffer(
-                (string) ($payload['eventId'] ?? 'zangi-book-launch-mulungushi-lusaka'),
+                (string) ($payload['eventId'] ?? 'zangi-book-launch-lusaka'),
                 (string) $payload['ticketTypeId'],
             );
 

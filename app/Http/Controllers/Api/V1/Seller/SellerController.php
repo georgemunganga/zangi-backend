@@ -118,7 +118,7 @@ class SellerController extends Controller
 
     public function activeEvent(Request $request): JsonResponse
     {
-        $event = $this->sellerService->getEventDetails('zangi-book-launch-mulungushi-lusaka');
+        $event = $this->sellerService->getEventDetails('zangi-book-launch-lusaka');
 
         return response()->json(['event' => $event]);
     }

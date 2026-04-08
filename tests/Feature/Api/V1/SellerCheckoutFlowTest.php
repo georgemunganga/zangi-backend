@@ -27,7 +27,7 @@ class SellerCheckoutFlowTest extends TestCase
         $this->travelTo(Carbon::parse('2026-04-20 10:00:00', 'Africa/Lusaka'));
 
         $response = $this->postJson('/api/v1/seller/checkout/mobile-money-intent', [
-            'eventId' => 'zangi-book-launch-mulungushi-lusaka',
+            'eventId' => 'zangi-book-launch-lusaka',
             'ticketTypeId' => 'standard',
             'quantity' => 2,
             'buyerPhone' => '0972827372',
@@ -40,7 +40,7 @@ class SellerCheckoutFlowTest extends TestCase
             ->assertJsonPath('amount', 600)
             ->assertJsonPath('sale.paymentMethod', 'Mobile Money')
             ->assertJsonPath('sale.paymentStatus', 'Pending')
-            ->assertJsonPath('share.eventUrl', 'https://www.zangisworld.com/events/zangi-book-launch-mulungushi-lusaka');
+            ->assertJsonPath('share.eventUrl', 'https://www.zangisworld.com/events/zangi-book-launch-lusaka');
 
         $ticketPurchase = TicketPurchase::query()->firstOrFail();
         $paymentIntent = PaymentIntent::query()->firstOrFail();
@@ -67,7 +67,7 @@ class SellerCheckoutFlowTest extends TestCase
         $this->travelTo(Carbon::parse('2026-05-10 12:00:00', 'Africa/Lusaka'));
 
         $intentResponse = $this->postJson('/api/v1/seller/checkout/mobile-money-intent', [
-                'eventId' => 'zangi-book-launch-mulungushi-lusaka',
+                'eventId' => 'zangi-book-launch-lusaka',
                 'ticketTypeId' => 'standard',
                 'quantity' => 1,
                 'buyerPhone' => '0972827372',
@@ -113,7 +113,7 @@ class SellerCheckoutFlowTest extends TestCase
         $this->travelTo(Carbon::parse('2026-03-29 09:00:00', 'Africa/Lusaka'));
 
         $this->postJson('/api/v1/seller/checkout/manual-deposit', [
-                'eventId' => 'zangi-book-launch-mulungushi-lusaka',
+                'eventId' => 'zangi-book-launch-lusaka',
                 'ticketTypeId' => 'standard',
                 'quantity' => 1,
                 'buyerPhone' => '0972827372',
@@ -156,7 +156,7 @@ class SellerCheckoutFlowTest extends TestCase
         $this->withToken($token)
             ->getJson('/api/v1/seller/events/active')
             ->assertOk()
-            ->assertJsonPath('event.slug', 'zangi-book-launch-mulungushi-lusaka');
+            ->assertJsonPath('event.slug', 'zangi-book-launch-lusaka');
 
         $this->withToken($token)
             ->getJson('/api/v1/seller/ticket-types')
@@ -202,13 +202,13 @@ class SellerCheckoutFlowTest extends TestCase
             ]);
 
         $this->withToken($token)
-            ->getJson('/api/v1/seller/events/zangi-book-launch-mulungushi-lusaka')
+            ->getJson('/api/v1/seller/events/zangi-book-launch-lusaka')
             ->assertOk()
-            ->assertJsonPath('event.publicEventUrl', 'https://www.zangisworld.com/events/zangi-book-launch-mulungushi-lusaka');
+            ->assertJsonPath('event.publicEventUrl', 'https://www.zangisworld.com/events/zangi-book-launch-lusaka');
 
         $saleResponse = $this->withToken($token)
             ->postJson('/api/v1/seller/checkout/manual-deposit', [
-                'eventId' => 'zangi-book-launch-mulungushi-lusaka',
+                'eventId' => 'zangi-book-launch-lusaka',
                 'ticketTypeId' => 'standard',
                 'quantity' => 1,
                 'buyerPhone' => '0972827372',
